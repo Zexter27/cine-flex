@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CineFlex</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="container">
+    <h1>CineFlex</h1>
+    <section id="login-panel" aria-labelledby="login-title">
+      <h2 id="login-title">Iniciar sesión</h2>
+      <form id="login-form">
+        <label for="username">Usuario</label>
+        <input id="username" name="username" autocomplete="username" required>
+        <label for="password">Contraseña</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button id="login-button" type="submit">Ingresar</button>
+      </form>
+      <p id="login-error" role="alert" hidden></p>
+    </section>
+    <section id="catalog-panel" aria-labelledby="catalog-title" hidden>
+      <div class="heading-row">
+        <h2 id="catalog-title">Cartelera</h2>
+        <button id="logout-button" type="button">Cerrar sesión</button>
+      </div>
+      <ul id="movie-list" aria-live="polite"></ul>
+    </section>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>

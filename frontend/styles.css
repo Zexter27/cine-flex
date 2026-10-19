@@ -1,0 +1,49 @@
+:root {
+  color-scheme: light;
+  font-family: Arial, sans-serif;
+  color: #172033;
+  background: #f4f6fb;
+}
+
+body {
+  margin: 0;
+}
+
+.container {
+  max-width: 38rem;
+  margin: 4rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 0.75rem;
+  box-shadow: 0 0.5rem 2rem #17203318;
+}
+
+h1 {
+  color: #c51d4a;
+}
+
+form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+input,
+button {
+  box-sizing: border-box;
+  padding: 0.7rem;
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#movie-list {
+  padding-left: 1.25rem;
+}
