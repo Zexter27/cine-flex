@@ -3,6 +3,7 @@ import {
   IsIn,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsString,
   Length,
   Matches,
@@ -67,4 +68,16 @@ export class CrearReservaDto {
   @IsString({ message: "El correo debe ser texto." })
   @IsNotEmpty({ message: "El correo del pagador es obligatorio." })
   correoElectronico!: string;
+
+  @Expose({ name: "funcionId" })
+  @Transform(({ value }) => value === undefined || value === null ? undefined : Number(value))
+  @IsOptional()
+  @IsNumber({}, { message: "La función debe ser numérica." })
+  funcionId?: number;
+
+  @Expose({ name: "asientos" })
+  @Transform(({ value }) => Array.isArray(value) ? value.map((item: unknown) => String(item)) : value)
+  @IsOptional()
+  @IsString({ each: true, message: "Los asientos deben ser identificadores de texto." })
+  asientos?: string[];
 }
