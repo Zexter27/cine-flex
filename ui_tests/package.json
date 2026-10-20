@@ -1,0 +1,7 @@
+﻿{"name":"cineflex-ui-tests",
+"private":true,
+"scripts":{
+    "test":"node test_suite.js"},
+"dependencies":{
+    "chromedriver":"^140.0.0",
+    "selenium-webdriver":"^4.35.0"}}
