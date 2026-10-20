@@ -19,22 +19,7 @@ jobs:
   api-tests:
     name: Backend + pruebas de API
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-          MYSQL_DATABASE: cineflex
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
+    timeout-minutes: 10
 
     steps:
       - name: Descargar el repositorio
@@ -50,8 +35,6 @@ jobs:
       - name: Crear .env para CI
         run: |
           cp .env.example .env
-          # En CI la base de datos está vacía: TypeORM debe crear las tablas.
-          sed -i 's/^DB_SYNCHRONIZE=.*/DB_SYNCHRONIZE=true/' .env
           # Clave efímera, solo válida durante esta ejecución.
           sed -i "s/^JWT_SECRET=.*/JWT_SECRET=$(openssl rand -hex 32)/" .env
 
@@ -92,18 +75,28 @@ jobs:
             fi
             echo "OK  $1 (HTTP $3)"
           }
-          EMAIL="ci-$(date +%s)@example.com"
-          PASS="clave-de-prueba-ci-123"
+          # Usuario de demostración del backend (backend/src/mocks/mock-datos.ts).
+          EMAIL="edwin@gmail.com"
+          PASS="edwin1234567"
 
-          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/usuarios/registrar" \
-            -H 'Content-Type: application/json' \
-            -d "{\"nombres\":\"CI\",\"apellidos\":\"Bot\",\"correoElectronico\":\"$EMAIL\",\"contrasena\":\"$PASS\"}")
-          check "Registro de usuario" 201 "$code"
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/health")
+          check "Health check" 200 "$code"
 
+          # Login incorrecto con un correo distinto al de demostración, para no
+          # contar intentos fallidos contra la cuenta que usa el resto de la prueba.
           code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/login" \
             -H 'Content-Type: application/json' \
-            -d "{\"correoElectronico\":\"$EMAIL\",\"contrasena\":\"incorrecta-123456\"}")
-          check "Login con contraseña incorrecta" 401 "$code"
+            -d '{"correoElectronico":"desconocido-ci@example.com","contrasena":"incorrecta-123456"}')
+          check "Login con credenciales incorrectas" 401 "$code"
+
+          # Bloqueo preventivo: al tercer intento fallido la cuenta se bloquea (423).
+          for n in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/login" \
+              -H 'Content-Type: application/json' \
+              -d '{"correoElectronico":"bloqueo-ci@example.com","contrasena":"incorrecta-123456"}')
+            if [ "$n" -lt 3 ]; then check "Bloqueo: intento fallido $n" 401 "$code"; fi
+          done
+          check "Bloqueo: tercer intento fallido" 423 "$code"
 
           TOKEN=$(curl -s -X POST "$BASE/login" \
             -H 'Content-Type: application/json' \
@@ -123,6 +116,10 @@ jobs:
 
           code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/asientos/disponibles")
           check "Asientos disponibles" 200 "$code"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/reserva" \
+            -H 'Content-Type: application/json' -d '{}')
+          check "Reserva sin token" 401 "$code"
 
           code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/ruta-inexistente")
           check "Ruta inexistente" 404 "$code"
