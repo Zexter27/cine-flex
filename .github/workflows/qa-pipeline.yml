@@ -1,0 +1,154 @@
+name: QA Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: 
+
+permissions:
+  contents: read
+
+
+concurrency:
+  group: qa-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-tests:
+    name: Backend + pruebas de API
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Crear .env para CI
+        run: |
+          cp .env.example .env
+          # Clave efímera, solo válida durante esta ejecución.
+          sed -i "s/^JWT_SECRET=.*/JWT_SECRET=$(openssl rand -hex 32)/" .env
+
+      - name: Instalar dependencias del backend
+        working-directory: backend
+        run: npm ci
+
+      - name: Verificar tipos (TypeScript)
+        working-directory: backend
+        run: npm run comprobar
+
+      - name: Iniciar el backend
+        working-directory: backend
+        run: |
+          nohup npm start > ../backend.log 2>&1 &
+          echo "Backend iniciado en segundo plano."
+
+      - name: Esperar a que el backend esté disponible
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/health > /dev/null; then
+              echo "El backend respondió en el intento $i."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::El backend no respondió en /health tras 60 segundos."
+          cat backend.log
+          exit 1
+
+      - name: Prueba de humo de la API
+        run: |
+          BASE=http://localhost:3000
+          check() { # check <descripcion> <esperado> <obtenido>
+            if [ "$2" != "$3" ]; then
+              echo "::error::$1: se esperaba HTTP $2 y se obtuvo $3"
+              exit 1
+            fi
+            echo "OK  $1 (HTTP $3)"
+          }
+          # Usuario de demostración del backend (backend/src/mocks/mock-datos.ts).
+          EMAIL="edwin@gmail.com"
+          PASS="edwin1234567"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/health")
+          check "Health check" 200 "$code"
+
+          # Login incorrecto con un correo distinto al de demostración, para no
+          # contar intentos fallidos contra la cuenta que usa el resto de la prueba.
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/login" \
+            -H 'Content-Type: application/json' \
+            -d '{"correoElectronico":"desconocido-ci@example.com","contrasena":"incorrecta-123456"}')
+          check "Login con credenciales incorrectas" 401 "$code"
+
+          # Bloqueo preventivo: al tercer intento fallido la cuenta se bloquea (423).
+          for n in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/login" \
+              -H 'Content-Type: application/json' \
+              -d '{"correoElectronico":"bloqueo-ci@example.com","contrasena":"incorrecta-123456"}')
+            if [ "$n" -lt 3 ]; then check "Bloqueo: intento fallido $n" 401 "$code"; fi
+          done
+          check "Bloqueo: tercer intento fallido" 423 "$code"
+
+          TOKEN=$(curl -s -X POST "$BASE/login" \
+            -H 'Content-Type: application/json' \
+            -d "{\"correoElectronico\":\"$EMAIL\",\"contrasena\":\"$PASS\"}" | jq -r '.datos.token')
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "::error::El login válido no devolvió un token."
+            exit 1
+          fi
+          echo "OK  Login válido (token recibido)"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/cartelera")
+          check "Cartelera sin token" 401 "$code"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/cartelera" \
+            -H "Authorization: Bearer $TOKEN")
+          check "Cartelera con token" 200 "$code"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/asientos/disponibles")
+          check "Asientos disponibles" 200 "$code"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/reserva" \
+            -H 'Content-Type: application/json' -d '{}')
+          check "Reserva sin token" 401 "$code"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/ruta-inexistente")
+          check "Ruta inexistente" 404 "$code"
+
+      - name: Ejecutar colección Postman con Newman
+        run: |
+          COLECCION=api_tests/CineFlex_API_Collection.json
+          ENTORNO=api_tests/CineFlex_Environment.json
+          if [ ! -s "$COLECCION" ] || [ ! -s "$ENTORNO" ]; then
+            echo "::warning::La colección o el entorno de Postman están vacíos; se omite Newman hasta que el equipo los complete."
+            exit 0
+          fi
+          mkdir -p reportes
+          npx --yes newman run "$COLECCION" -e "$ENTORNO" \
+            --reporters cli,junit \
+            --reporter-junit-export reportes/newman.xml
+
+      - name: Publicar reporte de Newman
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-newman
+          path: reportes/
+          if-no-files-found: ignore
+
+      - name: Publicar log del backend si algo falló
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-log
+          path: backend.log
+          if-no-files-found: ignore
