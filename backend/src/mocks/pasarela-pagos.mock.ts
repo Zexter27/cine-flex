@@ -30,6 +30,8 @@ const TARJETAS_PERMITIDAS: Record<TipoTarjeta, { patron: RegExp; longitud: numbe
   diners: { patron: /^3(?:0[0-5]|[68]\d)\d{11}$/, longitud: [14, 16] }
 };
 
+const TARJETA_FONDOS_INSUFICIENTES = "5555555555554444";
+
 function normalizarNumeroTarjeta(valor: string): string {
   return valor.replace(/\s+/g, "").replace(/-/g, "");
 }
@@ -148,7 +150,7 @@ export class PasarelaPagosMock {
       };
     }
 
-    if (datos.monto > 2500000) {
+    if (numero === TARJETA_FONDOS_INSUFICIENTES || datos.monto > 2500000) {
       return {
         aprobado: false,
         codigoHttp: 402,

@@ -154,10 +154,39 @@ export const asientosMock: AsientoMock[] = salas.flatMap((sala) =>
   )
 );
 
-export const mockStore = Object.freeze({
+const ocupacionAsientosPorFuncion: Record<number, Set<string>> = Object.fromEntries(
+  funcionesMock.map((funcion) => [funcion.id, new Set<string>()])
+);
+
+for (const funcion of funcionesMock) {
+  const asientosEnFuncion = asientosMock.filter((asiento) => {
+    const indiceAsiento = ((asiento.salaId - 1) * 5 * 10) + ((salas.findIndex((sala) => sala.id === asiento.salaId) * 50) + (asiento.numero - 1));
+    return (funcion.id + indiceAsiento) % 17 === 0 || (funcion.id * asiento.numero + asiento.salaId) % 23 === 0;
+  });
+
+  ocupacionAsientosPorFuncion[funcion.id] = new Set(asientosEnFuncion.map((asiento) => asiento.id));
+}
+
+export const mockStore = {
   usuarios: usuariosMock,
   peliculas: peliculasMock,
   salas,
   funciones: funcionesMock,
-  asientos: asientosMock
-});
+  asientos: asientosMock,
+  ocupacionAsientosPorFuncion
+};
+
+export function reservarAsientosEnFuncion(funcionId: number, asientosSeleccionados: string[]): Set<string> {
+  const funcionKey = Number(funcionId);
+  const reservas = mockStore.ocupacionAsientosPorFuncion[funcionKey] ?? new Set<string>();
+  for (const asientoId of asientosSeleccionados) {
+    reservas.add(asientoId);
+  }
+  mockStore.ocupacionAsientosPorFuncion[funcionKey] = reservas;
+  return reservas;
+}
+
+export function listarAsientosOcupadosPorFuncion(funcionId: number): Set<string> {
+  const funcionKey = Number(funcionId);
+  return new Set(mockStore.ocupacionAsientosPorFuncion[funcionKey] ?? []);
+}
