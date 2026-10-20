@@ -1,9 +1,7 @@
 import bcrypt from "bcryptjs";
-import { QueryFailedError } from "typeorm";
 import { ErrorAplicacion } from "../comun/error-aplicacion";
-import { baseDatos } from "../configuracion/base-datos";
-import { Usuario } from "../entidades/usuario";
 import { RegistrarUsuarioDto } from "../dto/registrar-usuario.dto";
+import { mockStore } from "../mocks/mock-datos";
 
 export interface UsuarioRegistrado {
   id: number;
@@ -13,21 +11,12 @@ export interface UsuarioRegistrado {
   fechaCreacion: Date;
 }
 
-function esViolacionUnicidad(error: unknown): boolean {
-  if (!(error instanceof QueryFailedError)) {
-    return false;
-  }
-
-  const detalle = error.driverError as { code?: string };
-  return detalle.code === "ER_DUP_ENTRY";
-}
-
 export class UsuarioServicio {
   async registrar(datos: RegistrarUsuarioDto): Promise<UsuarioRegistrado> {
-    const repositorio = baseDatos.getRepository(Usuario);
-    const usuarioExistente = await repositorio.findOneBy({
-      correoElectronico: datos.correoElectronico
-    });
+    const correoNormalizado = datos.correoElectronico.trim().toLowerCase();
+    const usuarioExistente = mockStore.usuarios.find(
+      (usuario) => usuario.correoElectronico.toLowerCase() === correoNormalizado
+    );
 
     if (usuarioExistente) {
       throw new ErrorAplicacion(
@@ -36,30 +25,22 @@ export class UsuarioServicio {
       );
     }
 
-    const usuario = repositorio.create({
+    const nuevoUsuario = {
+      id: mockStore.usuarios.length + 1001,
       nombres: datos.nombres,
       apellidos: datos.apellidos,
-      correoElectronico: datos.correoElectronico,
-      contrasenaHash: await bcrypt.hash(datos.contrasena, await bcrypt.genSalt())
-    });
+      correoElectronico: correoNormalizado,
+      contrasena: await bcrypt.hash(datos.contrasena, await bcrypt.genSalt())
+    };
 
-    try {
-      const usuarioGuardado = await repositorio.save(usuario);
-      return {
-        id: usuarioGuardado.id,
-        nombres: usuarioGuardado.nombres,
-        apellidos: usuarioGuardado.apellidos,
-        correoElectronico: usuarioGuardado.correoElectronico,
-        fechaCreacion: usuarioGuardado.fechaCreacion
-      };
-    } catch (error) {
-      if (esViolacionUnicidad(error)) {
-        throw new ErrorAplicacion(
-          "Ya existe una cuenta registrada con ese correo electrónico.",
-          409
-        );
-      }
-      throw error;
-    }
+    mockStore.usuarios.push(nuevoUsuario);
+
+    return {
+      id: nuevoUsuario.id,
+      nombres: nuevoUsuario.nombres,
+      apellidos: nuevoUsuario.apellidos,
+      correoElectronico: nuevoUsuario.correoElectronico,
+      fechaCreacion: new Date()
+    };
   }
 }

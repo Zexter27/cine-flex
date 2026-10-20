@@ -33,5 +33,6 @@ rutas.post("/usuarios/registrar", validarDto(RegistrarUsuarioDto),usuarios.regis
 rutas.get("/cartelera", requerirToken, cartelera.listar);
 rutas.get("/asientos/disponibles", asientos.listarDisponibles);
 rutas.post("/reserva", requerirToken, validarDto(CrearReservaDto), reservas.crear);
+rutas.post("/pagos/mock", requerirToken, validarDto(CrearReservaDto), reservas.crear);
 
 export default rutas;
