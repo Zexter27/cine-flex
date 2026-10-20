@@ -24,6 +24,7 @@ const elementos = {
   movieGrid: document.querySelector('#movie-grid'),
   seatGrid: document.querySelector('#seat-grid'),
   selectedSeatsText: document.querySelector('#selected-seats-text'),
+  seatSelectionError: document.querySelector('#seat-selection-error'),
   seatMovieTitle: document.querySelector('#seat-movie-title'),
   continueToPayment: document.querySelector('#continue-to-payment'),
   backToCatalogButton: document.querySelector('#back-to-catalog-button'),
@@ -107,8 +108,12 @@ function retrocederVista() {
 }
 
 window.addEventListener('popstate', (evento) => {
-  const vistaSolicitada = evento.state?.view || 'catalogo';
+  if (!estado.token) {
+    mostrarVista('login', { registrar: false, reemplazarUltima: true });
+    return;
+  }
 
+  const vistaSolicitada = evento.state?.view || 'catalogo';
   if (vistaSolicitada === 'login') {
     return;
   }
@@ -131,30 +136,21 @@ async function cargarCartelera() {
     const resultado = await respuesta.json();
     const peliculas = resultado.datos || [];
 
-    elementos.movieGrid.innerHTML = peliculas
-      .map((pelicula, indice) => {
-        const precio = 18000 + indice * 4500;
-        return `
-          <button
-            type="button"
-            class="movie-card"
-            data-testid="movie-card-${pelicula.id || indice + 1}"
-            data-movie-id="${pelicula.id || indice + 1}"
-            data-movie-title="${pelicula.titulo}"
-            data-movie-price="${precio}"
-          >
-            <div class="movie-poster" aria-hidden="true">🎬</div>
-            <div>
-              <h3>${pelicula.titulo}</h3>
-            </div>
-            <div class="movie-meta">
-              <span>${pelicula.hora || '18:30 hrs'}</span>
-              <strong>$${precio.toLocaleString('es-CO')}</strong>
-            </div>
-          </button>
-        `;
-      })
-      .join('');
+    elementos.movieGrid.innerHTML = peliculas.map((pelicula, indice) => {
+      const precio = 18000 + indice * 4500;
+      return `
+        <button type="button" class="movie-card" data-testid="movie-card-${pelicula.id || indice + 1}" data-movie-id="${pelicula.id || indice + 1}" data-movie-title="${pelicula.titulo}" data-movie-price="${precio}">
+          <div class="movie-poster" aria-hidden="true">🎬</div>
+          <div>
+            <h3>${pelicula.titulo}</h3>
+          </div>
+          <div class="movie-meta">
+            <span>${pelicula.hora || '18:30 hrs'}</span>
+            <strong>$${precio.toLocaleString('es-CO')}</strong>
+          </div>
+        </button>
+      `;
+    }).join('');
 
     elementos.movieGrid.querySelectorAll('[data-testid^="movie-card-"]').forEach((boton) => {
       boton.addEventListener('click', async () => {
@@ -180,9 +176,14 @@ async function cargarCartelera() {
 
 async function renderizarAsientos() {
   try {
-    const respuesta = await fetch(`${API_BASE_URL}/asientos/disponibles`);
+    const funcionId = estado.peliculaSeleccionada?.id ?? 1;
+    const respuesta = await fetch(`${API_BASE_URL}/asientos/disponibles?funcionId=${funcionId}`);
+    if (!respuesta.ok) {
+      throw new Error('No se pudo consultar la disponibilidad de asientos.');
+    }
+
     const resultado = await respuesta.json();
-    const disponibles = new Set((resultado.datos || []).map((asiento) => asiento.id));
+    const disponibles = new Set((resultado.datos || []).filter((asiento) => asiento.disponible).map((asiento) => asiento.id));
 
     const filas = ['A', 'B', 'C', 'D', 'E'];
     const columnas = [1, 2, 3, 4, 5, 6, 7, 8];
@@ -224,6 +225,7 @@ async function renderizarAsientos() {
           estado.asientosSeleccionados.push(seatId);
         }
 
+        elementos.seatSelectionError.classList.add('hidden');
         boton.classList.toggle('selected', index < 0 && estado.asientosSeleccionados.includes(seatId));
         actualizarResumenAsientos();
       });
@@ -231,7 +233,7 @@ async function renderizarAsientos() {
 
     actualizarResumenAsientos();
   } catch (error) {
-    console.error('Seat map error:', error);
+    console.error('Error al renderizar asientos:', error);
   }
 }
 
@@ -292,11 +294,12 @@ function limpiarReserva() {
 
 function prepararCheckout() {
   if (!estado.peliculaSeleccionada || estado.asientosSeleccionados.length === 0) {
-    elementos.checkoutError.textContent = 'Debes seleccionar una película y al menos un asiento.';
-    elementos.checkoutError.classList.remove('hidden');
+    elementos.seatSelectionError.textContent = 'Debes seleccionar una película y al menos un asiento.';
+    elementos.seatSelectionError.classList.remove('hidden');
     return;
   }
 
+  elementos.seatSelectionError.classList.add('hidden');
   estado.valorReserva = estado.peliculaSeleccionada.precio * estado.asientosSeleccionados.length;
   elementos.checkoutMovieName.textContent = estado.peliculaSeleccionada.titulo;
   elementos.checkoutSeatList.textContent = estado.asientosSeleccionados.join(', ');
@@ -315,7 +318,7 @@ async function confirmarPago(evento) {
     return;
   }
 
-  const numTarjeta = document.querySelector('#checkout-card-number').value.trim();
+  const numTarjeta = document.querySelector('#checkout-card-number').value.trim().replace(/[\s-]/g, '');
   const nombreTitular = document.querySelector('#checkout-card-holder').value.trim();
   const expiracion = document.querySelector('#checkout-expiry').value.trim();
   const cvv = document.querySelector('#checkout-cvv').value.trim();
@@ -330,7 +333,9 @@ async function confirmarPago(evento) {
     amount: estado.valorReserva,
     currency: 'COP',
     cardType: obtenerTipoTarjeta(numTarjeta),
-    email: 'edwin@gmail.com'
+    email: 'edwin@gmail.com',
+    funcionId: estado.peliculaSeleccionada?.id ?? null,
+    asientos: estado.asientosSeleccionados
   };
 
   try {

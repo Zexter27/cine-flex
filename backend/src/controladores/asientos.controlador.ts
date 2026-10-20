@@ -6,12 +6,13 @@ export class AsientosControlador {
   constructor(private readonly servicio: AsientosServicio) {}
 
   listarDisponibles = async (
-    _solicitud: Request,
+    solicitud: Request,
     respuesta: Response,
     siguiente: NextFunction
   ) => {
     try {
-      const asientos = await this.servicio.listarDisponibles();
+      const funcionId = solicitud.query.funcionId ? Number(solicitud.query.funcionId) : undefined;
+      const asientos = await this.servicio.listarDisponibles(Number.isFinite(funcionId) ? funcionId : undefined);
       return respuesta.status(200).json(
         crearRespuesta(true, "Los asientos disponibles se consultaron correctamente.", asientos)
       );
