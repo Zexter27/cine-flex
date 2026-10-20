@@ -38,11 +38,6 @@ if (puerto < 1 || puerto > 65535) {
   throw new Error("La variable de entorno PORT debe estar entre 1 y 65535.");
 }
 
-const puertoBaseDatos = obtenerEntero("DB_PORT");
-if (puertoBaseDatos < 1 || puertoBaseDatos > 65535) {
-  throw new Error("La variable de entorno DB_PORT debe estar entre 1 y 65535.");
-}
-
 const secretoJwt = obtenerTexto("JWT_SECRET");
 if (secretoJwt.length < 32) {
   throw new Error("La variable JWT_SECRET debe tener al menos 32 caracteres.");
@@ -65,15 +60,6 @@ export const configuracion = Object.freeze({
   jwt: Object.freeze({
     secreto: secretoJwt,
     duracionSegundos: duracionTokenSegundos
-  }),
-  baseDatos: Object.freeze({
-    anfitrion: obtenerTexto("DB_HOST"),
-    puerto: puertoBaseDatos,
-    usuario: obtenerTexto("DB_USER"),
-    contrasena: obtenerTextoOpcional("DB_PASSWORD"),
-    nombre: obtenerTexto("DB_NAME"),
-    sincronizar: obtenerBandera("DB_SYNCHRONIZE"),
-    registrarConsultas: obtenerBandera("DB_LOGGING")
   }),
   limiteCuerpoBytes,
   formatoRegistro: obtenerTexto("MORGAN_FORMAT"),
