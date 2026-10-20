@@ -1,38 +1,34 @@
-import { randomBytes } from "node:crypto";
-import bcrypt from "bcryptjs";
 import { ErrorAplicacion } from "../comun/error-aplicacion";
-import { baseDatos } from "../configuracion/base-datos";
 import { InicioSesionDto } from "../dto/inicio-sesion.dto";
-import { Usuario } from "../entidades/usuario";
+import { CREDENCIALES_MOCK, mockStore } from "../mocks/mock-datos";
 import { crearToken } from "./autenticacion.servicio";
 
 export class InicioSesionServicio {
-  private readonly hashComparacionInexistente = this.crearHashComparacionInexistente();
-
-  private async crearHashComparacionInexistente(): Promise<string> {
-    const contrasenaAleatoria = randomBytes(32).toString("hex");
-    const sal = await bcrypt.genSalt();
-    return bcrypt.hash(contrasenaAleatoria, sal);
-  }
-
   async iniciar(datos: InicioSesionDto): Promise<{
     usuario: { id: number; correoElectronico: string };
     token: string;
   }> {
-    const usuario = await baseDatos
-      .getRepository(Usuario)
-      .createQueryBuilder("usuario")
-      .addSelect("usuario.contrasenaHash")
-      .where("usuario.correoElectronico = :correoElectronico", {
-        correoElectronico: datos.correoElectronico
-      })
-      .getOne();
+    const correoNormalizado = datos.correoElectronico.trim().toLowerCase();
+    const contrasenaNormalizada = datos.contrasena.trim();
 
-    const hashAlmacenado = usuario?.contrasenaHash ??
-      await this.hashComparacionInexistente;
-    const contrasenaValida = await bcrypt.compare(datos.contrasena, hashAlmacenado);
+    const usuario = mockStore.usuarios.find(
+      (item) => item.correoElectronico.toLowerCase() === correoNormalizado
+    );
 
-    if (!usuario || !contrasenaValida) {
+    const credencialesValidas =
+      correoNormalizado === CREDENCIALES_MOCK.usuario.toLowerCase() &&
+      contrasenaNormalizada === CREDENCIALES_MOCK.contrasena;
+
+    if (!usuario && !credencialesValidas) {
+      throw new ErrorAplicacion(
+        "El correo electrónico o la contraseña no son correctos.",
+        401
+      );
+    }
+
+    const usuarioActivo = usuario ?? mockStore.usuarios[0];
+
+    if (usuarioActivo && usuarioActivo.contrasena !== contrasenaNormalizada && !credencialesValidas) {
       throw new ErrorAplicacion(
         "El correo electrónico o la contraseña no son correctos.",
         401
@@ -41,10 +37,10 @@ export class InicioSesionServicio {
 
     return {
       usuario: {
-        id: usuario.id,
-        correoElectronico: usuario.correoElectronico
+        id: usuarioActivo.id,
+        correoElectronico: usuarioActivo.correoElectronico
       },
-      token: crearToken(String(usuario.id))
+      token: crearToken(String(usuarioActivo.id))
     };
   }
 }

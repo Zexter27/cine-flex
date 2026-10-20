@@ -1,15 +1,15 @@
-import { baseDatos } from "../configuracion/base-datos";
-import { Pelicula } from "../entidades/pelicula";
+import { mockStore } from "../mocks/mock-datos";
 
 export class CarteleraServicio {
-  async listar(): Promise<Array<{ id: number; titulo: string }>> {
-    const peliculas = await baseDatos.getRepository(Pelicula).find({
-      select: { id: true, titulo: true },
-      order: { titulo: "ASC" }
-    });
-    return peliculas.map((pelicula) => ({
+  async listar(): Promise<Array<{ id: number; titulo: string; sinopsis: string; generos: string[]; duracionMinutos: number; clasificacion: string; poster: string }>> {
+    return mockStore.peliculas.map((pelicula) => ({
       id: pelicula.id,
-      titulo: pelicula.titulo
+      titulo: pelicula.titulo,
+      sinopsis: pelicula.sinopsis,
+      generos: pelicula.generos,
+      duracionMinutos: pelicula.duracionMinutos,
+      clasificacion: pelicula.clasificacion,
+      poster: pelicula.poster
     }));
   }
 }
