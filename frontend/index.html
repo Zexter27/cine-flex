@@ -1,33 +1,206 @@
 <!doctype html>
 <html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CineFlex</title>
-  <link rel="stylesheet" href="/styles.css">
-</head>
-<body>
-  <main class="container">
-    <h1>CineFlex</h1>
-    <section id="login-panel" aria-labelledby="login-title">
-      <h2 id="login-title">Iniciar sesión</h2>
-      <form id="login-form">
-        <label for="username">Usuario</label>
-        <input id="username" name="username" autocomplete="username" required>
-        <label for="password">Contraseña</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" required>
-        <button id="login-button" type="submit">Ingresar</button>
-      </form>
-      <p id="login-error" role="alert" hidden></p>
-    </section>
-    <section id="catalog-panel" aria-labelledby="catalog-title" hidden>
-      <div class="heading-row">
-        <h2 id="catalog-title">Cartelera</h2>
-        <button id="logout-button" type="button">Cerrar sesión</button>
-      </div>
-      <ul id="movie-list" aria-live="polite"></ul>
-    </section>
-  </main>
-  <script src="/app.js" defer></script>
-</body>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CineFlex | Reserva inteligente</title>
+    <meta
+      name="description"
+      content="Frontend institucional minimalista para login, cartelera, asientos y pago de CineFlex"
+    >
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-block" data-testid="app-brand">
+          <p class="eyebrow">CineFlex</p>
+          <h1>Reserva de cine y pagos</h1>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="back-button" class="ghost-button hidden" type="button" data-testid="back-button">
+            Volver
+          </button>
+          <button id="logout-button" class="secondary-button hidden" type="button" data-testid="logout-button">
+            Cerrar sesión
+          </button>
+        </div>
+      </header>
+
+      <main class="main-layout">
+        <section id="login-view" class="view" data-testid="login-view" aria-label="Vista de inicio de sesión">
+          <div class="panel auth-panel">
+            <div class="panel-header text-center">
+              <p class="eyebrow">Acceso</p>
+              <h2>Iniciar sesión</h2>
+            </div>
+
+            <form id="login-form" data-testid="login-form" novalidate>
+              <div>
+                <label for="login-email">Correo electrónico</label>
+                <input
+                  id="login-email"
+                  name="email"
+                  type="email"
+                  data-testid="login-email-input"
+                  autocomplete="username"
+                  value="edwin@gmail.com"
+                  required
+                >
+              </div>
+
+              <div>
+                <label for="login-password">Contraseña</label>
+                <input
+                  id="login-password"
+                  name="password"
+                  type="password"
+                  data-testid="login-password-input"
+                  autocomplete="current-password"
+                  value="edwin1234567"
+                  required
+                >
+              </div>
+
+              <button id="login-submit" type="submit" class="primary-button" data-testid="login-submit-button">
+                Ingresar
+              </button>
+            </form>
+
+            <p id="login-error" class="alert error hidden" role="alert" data-testid="login-error"></p>
+          </div>
+        </section>
+
+        <section id="catalog-view" class="view hidden" data-testid="catalog-view" aria-label="Vista de cartelera">
+          <div class="panel">
+            <div class="panel-header split-header">
+              <div>
+                <p class="eyebrow">Cartelera</p>
+                <h2>Películas disponibles</h2>
+              </div>
+              <span class="status-pill" data-testid="catalog-status">100+ propuestas</span>
+            </div>
+
+            <div id="movie-grid" class="movie-grid" data-testid="movie-grid" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section id="seat-view" class="view hidden" data-testid="seat-view" aria-label="Vista de selección de asientos">
+          <div class="panel">
+            <div class="panel-header split-header">
+              <div>
+                <p class="eyebrow">Selección</p>
+                <h2 id="seat-movie-title">Elige tus asientos</h2>
+              </div>
+
+              <div class="header-actions">
+                <button id="back-to-catalog-button" type="button" class="ghost-button" data-testid="back-to-catalog-button">
+                  Volver
+                </button>
+                <button id="continue-to-payment" type="button" class="primary-button" data-testid="continue-to-payment-button">
+                  Continuar al pago
+                </button>
+              </div>
+            </div>
+
+            <div class="screen" data-testid="screen-indicator">Pantalla</div>
+            <div id="seat-grid" class="seat-grid" data-testid="seat-grid"></div>
+
+            <div class="selection-summary" data-testid="seat-selection-summary">
+              <span>Asientos seleccionados:</span>
+              <strong id="selected-seats-text">Ninguno</strong>
+            </div>
+          </div>
+        </section>
+
+        <section id="checkout-view" class="view hidden" data-testid="checkout-view" aria-label="Vista de pago">
+          <div class="panel checkout-panel">
+            <div class="panel-header split-header">
+              <div>
+                <p class="eyebrow">Checkout</p>
+                <h2>Pago seguro</h2>
+              </div>
+              <button id="back-to-seat-button" type="button" class="ghost-button" data-testid="back-to-seat-button">
+                Volver a asientos
+              </button>
+            </div>
+
+            <div class="checkout-grid">
+              <aside class="checkout-summary" data-testid="checkout-summary">
+                <h3>Resumen de compra</h3>
+                <div class="summary-item">
+                  <span>Película</span>
+                  <strong id="checkout-movie-name">—</strong>
+                </div>
+                <div class="summary-item">
+                  <span>Asientos</span>
+                  <strong id="checkout-seat-list">—</strong>
+                </div>
+                <div class="summary-item total-row">
+                  <span>Total</span>
+                  <strong id="checkout-total">$0</strong>
+                </div>
+              </aside>
+
+              <form id="checkout-form" data-testid="checkout-form" novalidate>
+                <div>
+                  <label for="checkout-card-number">Número de tarjeta</label>
+                  <input id="checkout-card-number" type="text" inputmode="numeric" data-testid="checkout-card-number" maxlength="19" placeholder="4242 4242 4242 4242" required>
+                </div>
+
+                <div class="form-row">
+                  <div>
+                    <label for="checkout-card-holder">Titular</label>
+                    <input id="checkout-card-holder" type="text" data-testid="checkout-card-holder" value="Edwin Martinez" required>
+                  </div>
+                  <div>
+                    <label for="checkout-expiry">Expira</label>
+                    <input id="checkout-expiry" type="text" data-testid="checkout-expiry" value="12/30" maxlength="5" placeholder="MM/YY" required>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div>
+                    <label for="checkout-cvv">CVV</label>
+                    <input id="checkout-cvv" type="password" inputmode="numeric" data-testid="checkout-cvv" maxlength="4" value="123" required>
+                  </div>
+                  <div>
+                    <label for="checkout-amount">Monto</label>
+                    <input id="checkout-amount" type="text" data-testid="checkout-amount" value="$0" readonly>
+                  </div>
+                </div>
+
+                <button id="checkout-submit" type="submit" class="primary-button" data-testid="checkout-submit-button">
+                  Confirmar pago
+                </button>
+              </form>
+            </div>
+
+            <p id="checkout-error" class="alert error hidden" role="alert" data-testid="checkout-error"></p>
+          </div>
+        </section>
+
+        <section id="confirmation-view" class="view hidden" data-testid="confirmation-view" aria-label="Vista de confirmación">
+          <div class="panel confirmation-panel">
+            <div class="panel-header text-center">
+              <p class="eyebrow">Confirmación</p>
+              <h2>Reserva confirmada</h2>
+            </div>
+
+            <div id="confirmation-detail" class="confirmation-detail" data-testid="confirmation-detail"></div>
+
+            <div class="confirmation-actions">
+              <button id="new-booking-button" type="button" class="primary-button" data-testid="new-booking-button">
+                Nueva reserva
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js" defer></script>
+  </body>
 </html>
+
