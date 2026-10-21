@@ -132,7 +132,8 @@
               "    pm.expect(p.titulo).to.be.a('string').and.not.empty;",
               "    pm.expect(p.generos).to.be.an('array');",
               "  });",
-              "});"
+              "});",
+              "pm.test('SLA: responde en menos de 300 ms', () => pm.expect(pm.response.responseTime).to.be.below(300));"
             ],
             "type": "text/javascript"
           }
@@ -313,6 +314,93 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"cardNumber\": \"4111111111111111\",\n  \"cardHolder\": \"Edwin Martinez\",\n  \"expiryMonth\": \"12\",\n  \"expiryYear\": \"2030\",\n  \"cvv\": \"123\",\n  \"amount\": 45000,\n  \"currency\": \"COP\",\n  \"cardType\": \"visa\",\n  \"email\": \"otra.persona@ejemplo.com\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/reserva",
+          "host": ["{{baseUrl}}"],
+          "path": ["reserva"]
+        }
+      }
+    },
+    {
+      "name": "9. Reserva tarjeta vencida -> 402",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Estado HTTP 402', () => pm.response.to.have.status(402));",
+              "pm.test('exito es false', () => pm.expect(pm.response.json().exito).to.be.false);",
+              "pm.test('mensaje de tarjeta vencida', () => pm.expect(pm.response.json().mensaje).to.include('vencida'));",
+              "pm.test('datos es null', () => pm.expect(pm.response.json().datos).to.eql(null));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cardNumber\": \"4111111111111111\",\n  \"cardHolder\": \"Edwin Martinez\",\n  \"expiryMonth\": \"01\",\n  \"expiryYear\": \"2020\",\n  \"cvv\": \"123\",\n  \"amount\": 45000,\n  \"currency\": \"COP\",\n  \"cardType\": \"visa\",\n  \"email\": \"{{correoDemo}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/reserva",
+          "host": ["{{baseUrl}}"],
+          "path": ["reserva"]
+        }
+      }
+    },
+    {
+      "name": "10. Reserva tarjeta no numerica -> 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Estado HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('exito es false', () => pm.expect(pm.response.json().exito).to.be.false);",
+              "pm.test('mensaje de numero de tarjeta invalido', () => pm.expect(pm.response.json().mensaje).to.include('La información enviada no es válida'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cardNumber\": \"abc123\",\n  \"cardHolder\": \"Edwin Martinez\",\n  \"expiryMonth\": \"12\",\n  \"expiryYear\": \"2030\",\n  \"cvv\": \"123\",\n  \"amount\": 45000,\n  \"currency\": \"COP\",\n  \"cardType\": \"visa\",\n  \"email\": \"{{correoDemo}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
