@@ -1,0 +1,13 @@
+{
+  "name": "cineflex-api-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Automatizacion de pruebas de API de CineFlex con Postman/Newman",
+  "scripts": {
+    "test": "newman run CineFlex_API_Collection.json -e CineFlex_Environment.json",
+    "test:report": "newman run CineFlex_API_Collection.json -e CineFlex_Environment.json --reporters cli,json --reporter-json-export reportes/newman.json"
+  },
+  "devDependencies": {
+    "newman": "^6.2.1"
+  }
+}
