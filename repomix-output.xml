@@ -1,0 +1,3264 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.github/
+  workflows/
+    qa-pipeline.yml
+api_tests/
+  CineFlex_API_Collection.json
+  CineFlex_Environment.json
+backend/
+  src/
+    comun/
+      error-aplicacion.ts
+      respuesta-http.ts
+    configuracion/
+      entorno.ts
+    controladores/
+      asientos.controlador.ts
+      autenticacion.controlador.ts
+      cartelera.controlador.ts
+      reserva.controlador.ts
+    dto/
+      crear-reserva.dto.ts
+      inicio-sesion.dto.ts
+      validar-dto.ts
+    middlewares/
+      autenticacion.middleware.ts
+      errores.middleware.ts
+    mocks/
+      mock-datos.ts
+      pasarela-pagos.mock.ts
+    rutas/
+      api.rutas.ts
+    servicios/
+      asientos.servicio.ts
+      autenticacion.servicio.ts
+      cartelera.servicio.ts
+      inicio-sesion.servicio.ts
+      reserva.servicio.ts
+    app.ts
+    servidor.ts
+  package.json
+  tsconfig.json
+frontend/
+  app.js
+  index.html
+  styles.css
+performance/
+  cine-flex.jmx
+ui_tests/
+  pages/
+    CarteleraPage.js
+    LoginPage.js
+    ReservaPage.js
+  package.json
+  test_suite.js
+.env.example
+.gitignore
+estrategia_pruebas_CineFlex.pdf
+README.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".github/workflows/qa-pipeline.yml">
+
+</file>
+
+<file path="api_tests/CineFlex_API_Collection.json">
+
+</file>
+
+<file path="api_tests/CineFlex_Environment.json">
+
+</file>
+
+<file path="backend/src/comun/error-aplicacion.ts">
+export class ErrorAplicacion extends Error {
+  constructor(
+    mensaje: string,
+    public readonly codigoHttp: number
+  ) {
+    super(mensaje);
+    this.name = "ErrorAplicacion";
+  }
+}
+</file>
+
+<file path="backend/src/comun/respuesta-http.ts">
+export interface RespuestaHttp<T> {
+  exito: boolean;
+  mensaje: string;
+  datos: T | null;
+}
+
+export function crearRespuesta<T>(
+  exito: boolean,
+  mensaje: string,
+  datos: T | null
+): RespuestaHttp<T> {
+  return { exito, mensaje, datos };
+}
+</file>
+
+<file path="backend/src/controladores/autenticacion.controlador.ts">
+import type { NextFunction, Request, Response } from "express";
+import { crearRespuesta } from "../comun/respuesta-http";
+import { InicioSesionDto } from "../dto/inicio-sesion.dto";
+import { InicioSesionServicio } from "../servicios/inicio-sesion.servicio";
+
+export class AutenticacionControlador {
+  constructor(private readonly servicio: InicioSesionServicio) {}
+
+  iniciarSesion = async (
+    solicitud: Request<unknown, unknown, InicioSesionDto>,
+    respuesta: Response,
+    siguiente: NextFunction
+  ) => {
+    try {
+      const resultado = await this.servicio.iniciar(solicitud.body);
+      return respuesta.status(200).json(
+        crearRespuesta(true, "El inicio de sesión se realizó efectivamente.", resultado)
+      );
+    } catch (error) {
+      return siguiente(error);
+    }
+  };
+}
+</file>
+
+<file path="backend/src/controladores/cartelera.controlador.ts">
+import type { Request, Response, NextFunction } from "express";
+import { crearRespuesta } from "../comun/respuesta-http";
+import { CarteleraServicio } from "../servicios/cartelera.servicio";
+
+export class CarteleraControlador {
+  constructor(private readonly servicio: CarteleraServicio) {}
+
+  listar = async (_solicitud: Request, respuesta: Response, siguiente: NextFunction) => {
+    try {
+      const peliculas = await this.servicio.listar();
+      return respuesta.status(200).json(
+        crearRespuesta(true, "La cartelera se consultó correctamente.", peliculas)
+      );
+    } catch (error) {
+      return siguiente(error);
+    }
+  };
+}
+</file>
+
+<file path="backend/src/dto/inicio-sesion.dto.ts">
+import { Transform } from "class-transformer";
+import {
+  IsByteLength,
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MaxLength
+} from "class-validator";
+
+export class InicioSesionDto {
+  @Transform(({ value }) => typeof value === "string" ? value.trim().toLowerCase() : value)
+  @IsString({ message: "El correo electrónico debe ser texto." })
+  @IsNotEmpty({ message: "El correo electrónico es obligatorio." })
+  @IsEmail({}, { message: "Ingresa un correo electrónico válido." })
+  @MaxLength(254, { message: "El correo electrónico no puede superar 254 caracteres." })
+  correoElectronico!: string;
+
+  @IsString({ message: "La contraseña debe ser texto." })
+  @IsNotEmpty({ message: "La contraseña es obligatoria." })
+  @IsByteLength(1, 72, {
+    message: "La contraseña no puede superar los 72 bytes admitidos por el sistema."
+  })
+  contrasena!: string;
+}
+</file>
+
+<file path="backend/src/dto/validar-dto.ts">
+import { plainToInstance } from "class-transformer";
+import { validate, type ValidationError } from "class-validator";
+import type { NextFunction, Request, Response } from "express";
+import { crearRespuesta } from "../comun/respuesta-http";
+
+type ConstructorDto<T extends object> = new () => T;
+
+function obtenerDetallesValidacion(errores: ValidationError[]): string[] {
+  return errores.flatMap((error) => [
+    ...Object.values(error.constraints ?? {}),
+    ...obtenerDetallesValidacion(error.children ?? [])
+  ]);
+}
+
+export function validarDto<T extends object>(tipoDto: ConstructorDto<T>) {
+  return async (solicitud: Request, respuesta: Response, siguiente: NextFunction) => {
+    const dto = plainToInstance(tipoDto, solicitud.body);
+    const errores = await validate(dto, { whitelist: true, forbidNonWhitelisted: true });
+
+    if (errores.length > 0) {
+      return respuesta.status(400).json(
+        crearRespuesta(
+          false,
+          "La información enviada no es válida. Revisa los campos indicados.",
+          obtenerDetallesValidacion(errores)
+        )
+      );
+    }
+
+    solicitud.body = dto;
+    return siguiente();
+  };
+}
+</file>
+
+<file path="backend/src/middlewares/autenticacion.middleware.ts">
+import type { NextFunction, Request, Response } from "express";
+import { crearRespuesta } from "../comun/respuesta-http";
+import { tokenValido } from "../servicios/autenticacion.servicio";
+
+export function requerirToken(solicitud: Request, respuesta: Response, siguiente: NextFunction) {
+  const autorizacion = solicitud.get("authorization") ?? "";
+  const coincidencia = autorizacion.match(/^Bearer\s+(.+)$/i);
+
+  if (!coincidencia || !tokenValido(coincidencia[1])) {
+    return respuesta.status(401).json(
+      crearRespuesta(false, "Debes iniciar sesión con un token válido para acceder a este recurso.", null)
+    );
+  }
+  return siguiente();
+}
+</file>
+
+<file path="backend/src/middlewares/errores.middleware.ts">
+import type { ErrorRequestHandler, RequestHandler } from "express";
+import { ErrorAplicacion } from "../comun/error-aplicacion";
+import { crearRespuesta } from "../comun/respuesta-http";
+
+export const rutaNoEncontrada: RequestHandler = (_solicitud, respuesta) => {
+  respuesta.status(404).json(
+    crearRespuesta(false, "La ruta solicitada no existe. Verifica la dirección y el método HTTP.", null)
+  );
+};
+
+export const manejarErrores: ErrorRequestHandler = (error: unknown, _solicitud, respuesta, _siguiente) => {
+  if (error instanceof ErrorAplicacion) {
+    return respuesta.status(error.codigoHttp).json(
+      crearRespuesta(false, error.message, null)
+    );
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "type" in error
+  ) {
+    if (error.type === "entity.parse.failed") {
+      return respuesta.status(400).json(
+        crearRespuesta(false, "El cuerpo de la solicitud contiene JSON mal formado.", null)
+      );
+    }
+    if (error.type === "entity.too.large") {
+      return respuesta.status(413).json(
+        crearRespuesta(false, "El cuerpo de la solicitud supera el tamaño máximo permitido.", null)
+      );
+    }
+  }
+
+  console.error("Ocurrió un error inesperado al procesar la solicitud.", error);
+  return respuesta.status(500).json(
+    crearRespuesta(false, "Ocurrió un error interno. Intenta nuevamente más tarde.", null)
+  );
+};
+</file>
+
+<file path="backend/src/servicios/autenticacion.servicio.ts">
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { configuracion } from "../configuracion/entorno";
+
+function codificarBase64Url(valor: string): string {
+  return Buffer.from(valor).toString("base64url");
+}
+
+export function crearToken(usuario: string): string {
+  const encabezado = codificarBase64Url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const contenido = codificarBase64Url(JSON.stringify({
+    sub: usuario,
+    exp: Math.floor(Date.now() / 1000) + configuracion.jwt.duracionSegundos
+  }));
+  const firmaContenido = `${encabezado}.${contenido}`;
+  const firma = createHmac("sha256", configuracion.jwt.secreto)
+    .update(firmaContenido)
+    .digest("base64url");
+  return `${firmaContenido}.${firma}`;
+}
+
+export function tokenValido(token: string): boolean {
+  const partes = token.split(".");
+  if (partes.length !== 3) {
+    return false;
+  }
+
+  const contenidoFirmado = `${partes[0]}.${partes[1]}`;
+  const firmaEsperada = createHmac("sha256", configuracion.jwt.secreto)
+    .update(contenidoFirmado)
+    .digest();
+  const firmaRecibida = Buffer.from(partes[2], "base64url");
+  if (
+    firmaRecibida.length !== firmaEsperada.length ||
+    !timingSafeEqual(firmaRecibida, firmaEsperada)
+  ) {
+    return false;
+  }
+
+  try {
+    const datos = JSON.parse(Buffer.from(partes[1], "base64url").toString("utf8")) as {
+      sub?: unknown;
+      exp?: unknown;
+    };
+    return typeof datos.sub === "string" &&
+      typeof datos.exp === "number" &&
+      datos.exp > Math.floor(Date.now() / 1000);
+  } catch {
+    return false;
+  }
+}
+</file>
+
+<file path="performance/cine-flex.jmx">
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="cine-flex">
+      <stringProp name="TestPlan.comments">plan de pruebas de estres y carga</stringProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+    </TestPlan>
+    <hashTree>
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults">
+        <stringProp name="HTTPSampler.domain">localhost</stringProp>
+        <stringProp name="HTTPSampler.port">3000</stringProp>
+        <stringProp name="HTTPSampler.protocol">http</stringProp>
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+          <collectionProp name="Arguments.arguments"/>
+        </elementProp>
+        <stringProp name="HTTPSampler.implementation">HttpClient4</stringProp>
+      </ConfigTestElement>
+      <hashTree/>
+      <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
+        <boolProp name="ResultCollector.error_logging">false</boolProp>
+        <objProp>
+          <name>saveConfig</name>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>true</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <sentBytes>true</sentBytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <idleTime>true</idleTime>
+            <connectTime>true</connectTime>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group">
+        <intProp name="ThreadGroup.num_threads">500</intProp>
+        <intProp name="ThreadGroup.ramp_time">15</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Authorization</stringProp>
+              <stringProp name="Header.value">Bearer ${mi_jwt}</stringProp>
+            </elementProp>
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Content-Type</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="login" enabled="true">
+          <stringProp name="HTTPSampler.path">/login</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&#xd;
+  &quot;correoElectronico&quot;: &quot;edwin@gmail.com&quot;,&#xd;
+  &quot;contrasena&quot;: &quot;edwin1234567&quot;&#xd;
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="jwt" enabled="true">
+            <stringProp name="JSONPostProcessor.referenceNames">mi_jwt</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.datos.token</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers"></stringProp>
+          </JSONPostProcessor>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="cartelera" enabled="true">
+          <stringProp name="HTTPSampler.path">/cartelera</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Asientos Disponibles" enabled="true">
+          <stringProp name="HTTPSampler.path">/asientos/disponibles</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager" enabled="true">
+            <collectionProp name="HeaderManager.headers"/>
+          </HeaderManager>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Crear Reserva" enabled="true">
+          <stringProp name="HTTPSampler.path">/reserva</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&#xd;
+  &quot;cardNumber&quot;: &quot;4111111111111111&quot;,&#xd;
+  &quot;cardHolder&quot;: &quot;edwin&quot;,&#xd;
+  &quot;expiryMonth&quot;: &quot;12&quot;,&#xd;
+  &quot;expiryYear&quot;: &quot;2028&quot;,&#xd;
+  &quot;cvv&quot;: &quot;123&quot;,&#xd;
+  &quot;amount&quot;: 25000,&#xd;
+  &quot;currency&quot;: &quot;COP&quot;,&#xd;
+  &quot;cardType&quot;: &quot;visa&quot;,&#xd;
+  &quot;email&quot;: &quot;edwin@gmail.com&quot;,&#xd;
+  &quot;funcionId&quot;: 1,&#xd;
+  &quot;asientos&quot;: &quot;[A${__counter(FALSE,)}]&quot;&#xd;
+}&#xd;
+</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
+</file>
+
+<file path="ui_tests/pages/CarteleraPage.js">
+const { until } = require('selenium-webdriver');
+
+class CarteleraPage {
+  constructor(driver) {
+    this.driver = driver;
+    this.catalogView = { id: 'catalog-view' };
+    this.movieGrid = { id: 'movie-grid' };
+    this.movieCards = '[data-testid^="movie-card-"]';
+    this.catalogTitle = { id: 'catalog-view' };
+    this.backButton = { id: 'back-button' };
+  }
+
+  async obtenerTituloCatalogo() {
+    return this.driver.findElement({ id: 'catalog-view' }).getText();
+  }
+
+  async seleccionarPrimeraPelicula() {
+    await this.driver.wait(
+      until.elementIsVisible(this.driver.findElement({ id: this.catalogView.id })),
+      10000,
+      'La vista de cartelera no está visible.'
+    );
+
+    let seleccionada = false;
+    for (let intento = 0; intento < 3 && !seleccionada; intento += 1) {
+      try {
+        const primeraPelicula = await this.driver.wait(
+          until.elementLocated({ css: this.movieCards }),
+          10000,
+          'No se cargaron películas en la cartelera.'
+        );
+        await this.driver.wait(
+          until.elementIsVisible(primeraPelicula),
+          10000,
+          'La primera película no está visible.'
+        );
+        await primeraPelicula.click();
+        seleccionada = true;
+      } catch (error) {
+        if (error.name !== 'StaleElementReferenceError' || intento === 2) {
+          throw error;
+        }
+      }
+    }
+
+    await this.driver.wait(
+      until.elementIsVisible(this.driver.findElement({ id: 'seat-view' })),
+      10000,
+      'La vista de asientos no apareció después de seleccionar la película.'
+    );
+  }
+
+  async obtenerCantidadPeliculas() {
+    return (await this.driver.findElements({ css: this.movieCards })).length;
+  }
+
+  async navegarAtras() {
+    const button = await this.driver.findElement({ id: this.backButton.id });
+    await button.click();
+  }
+}
+
+module.exports = CarteleraPage;
+</file>
+
+<file path="ui_tests/pages/LoginPage.js">
+class LoginPage {
+  constructor(driver) {
+    this.driver = driver;
+    this.emailInput = { id: 'login-email' };
+    this.passwordInput = { id: 'login-password' };
+    this.submitButton = { id: 'login-submit' };
+    this.errorMessage = { id: 'login-error' };
+    this.logoutButton = { id: 'logout-button' };
+  }
+
+  async abrir() {
+    await this.driver.get('http://localhost:3000');
+  }
+
+  async ingresarCredenciales(email, password) {
+    const emailElement = await this.driver.findElement({ id: this.emailInput.id });
+    const passwordElement = await this.driver.findElement({ id: this.passwordInput.id });
+    await emailElement.clear();
+    await emailElement.sendKeys(email);
+    await passwordElement.clear();
+    await passwordElement.sendKeys(password);
+  }
+
+  async hacerLogin() {
+    const button = await this.driver.findElement({ id: this.submitButton.id });
+    await button.click();
+  }
+
+  async obtenerMensajeError() {
+    return this.driver.findElement({ id: this.errorMessage.id }).getText();
+  }
+
+  async cerrarSesion() {
+    const button = await this.driver.findElement({ id: this.logoutButton.id });
+    await button.click();
+  }
+}
+
+module.exports = LoginPage;
+</file>
+
+<file path="ui_tests/pages/ReservaPage.js">
+const { until } = require('selenium-webdriver');
+
+class ReservaPage {
+  constructor(driver) {
+    this.driver = driver;
+    this.seatGrid = { id: 'seat-grid' };
+    this.continueToPayment = { id: 'continue-to-payment' };
+    this.cardNumberInput = { id: 'checkout-card-number' };
+    this.cardHolderInput = { id: 'checkout-card-holder' };
+    this.expiryInput = { id: 'checkout-expiry' };
+    this.cvvInput = { id: 'checkout-cvv' };
+    this.checkoutForm = { id: 'checkout-form' };
+    this.checkoutError = { id: 'checkout-error' };
+    this.confirmationDetail = { id: 'confirmation-detail' };
+    this.newBookingButton = { id: 'new-booking-button' };
+    this.seatButton = '.seat-button';
+    this.backButton = { id: 'back-button' };
+    this.logoutButton = { id: 'logout-button' };
+  }
+
+  async seleccionarPrimerAsientoDisponible() {
+    const asiento = await this.driver.findElement({
+      css: `${this.seatButton}:not(.occupied)`
+    });
+    await asiento.click();
+    await this.driver.wait(async () => {
+      const asientosSeleccionados = await this.driver.findElement({ id: 'selected-seats-text' }).getText();
+      return asientosSeleccionados !== 'Ninguno';
+    }, 5000, 'No se pudo seleccionar el asiento disponible.');
+  }
+
+  async continuarAlPago() {
+    await this.driver.findElement({ id: this.continueToPayment.id }).click();
+    await this.driver.wait(
+      until.elementIsVisible(this.driver.findElement({ id: 'checkout-view' })),
+      5000,
+      'La vista de pago no apareció después de continuar.'
+    );
+  }
+
+  async completarPago({ numero, titular, expiracion, cvv }) {
+    const form = await this.driver.findElement({ id: this.checkoutForm.id });
+    await form.findElement({ id: this.cardNumberInput.id }).clear();
+    await form.findElement({ id: this.cardNumberInput.id }).sendKeys(numero);
+    await form.findElement({ id: this.cardHolderInput.id }).clear();
+    await form.findElement({ id: this.cardHolderInput.id }).sendKeys(titular);
+    await form.findElement({ id: this.expiryInput.id }).clear();
+    await form.findElement({ id: this.expiryInput.id }).sendKeys(expiracion);
+    await form.findElement({ id: this.cvvInput.id }).clear();
+    await form.findElement({ id: this.cvvInput.id }).sendKeys(cvv);
+  }
+
+  async confirmarPago() {
+    await this.driver.findElement({ css: '[data-testid="checkout-submit-button"]' }).click();
+  }
+
+  async obtenerDetalleConfirmacion() {
+    return this.driver.findElement({ id: this.confirmationDetail.id }).getText();
+  }
+
+  async confirmarNuevaReserva() {
+    await this.driver.findElement({ id: this.newBookingButton.id }).click();
+  }
+
+  async cerrarSesion() {
+    await this.driver.findElement({ id: this.logoutButton.id }).click();
+  }
+}
+
+module.exports = ReservaPage;
+</file>
+
+<file path="ui_tests/package.json">
+{"name":"cineflex-ui-tests",
+"private":true,
+"scripts":{
+    "test":"node test_suite.js"},
+"dependencies":{
+    "chromedriver":"^140.0.0",
+    "selenium-webdriver":"^4.35.0"}}
+</file>
+
+<file path=".gitignore">
+node_modules/
+.env
+npm-debug.log*
+backend.log
+performance/*.jtl
+performance/*.log
+.DS_Store
+Thumbs.db
+</file>
+
+<file path="backend/src/configuracion/entorno.ts">
+import path from "node:path";
+import dotenv from "dotenv";
+
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+dotenv.config({ path: path.resolve(process.cwd(), "..", ".env") });
+
+function obtenerTexto(nombre: string): string {
+  const valor = process.env[nombre];
+  if (valor === undefined || valor.trim() === "") {
+    throw new Error(`La variable de entorno ${nombre} es obligatoria.`);
+  }
+  return valor.trim();
+}
+
+function obtenerTextoOpcional(nombre: string): string {
+  return process.env[nombre]?.trim() ?? "";
+}
+
+function obtenerEntero(nombre: string): number {
+  const valor = obtenerTexto(nombre);
+  const numero = Number(valor);
+  if (!Number.isInteger(numero)) {
+    throw new Error(`La variable de entorno ${nombre} debe ser un número entero.`);
+  }
+  return numero;
+}
+
+function obtenerBandera(nombre: string): boolean {
+  const valor = obtenerTexto(nombre).toLowerCase();
+  if (valor !== "true" && valor !== "false") {
+    throw new Error(`La variable de entorno ${nombre} debe ser true o false.`);
+  }
+  return valor === "true";
+}
+
+const puerto = obtenerEntero("PORT");
+if (puerto < 1 || puerto > 65535) {
+  throw new Error("La variable de entorno PORT debe estar entre 1 y 65535.");
+}
+
+const secretoJwt = obtenerTexto("JWT_SECRET");
+if (secretoJwt.length < 32) {
+  throw new Error("La variable JWT_SECRET debe tener al menos 32 caracteres.");
+}
+
+const duracionTokenSegundos = obtenerEntero("JWT_DURACION_SEGUNDOS");
+if (duracionTokenSegundos < 1) {
+  throw new Error("La variable JWT_DURACION_SEGUNDOS debe ser mayor que cero.");
+}
+
+const limiteCuerpoBytes = obtenerEntero("LIMITE_CUERPO_BYTES");
+if (limiteCuerpoBytes < 1) {
+  throw new Error("La variable LIMITE_CUERPO_BYTES debe ser mayor que cero.");
+}
+
+const rutaBackend = path.resolve(__dirname, "../..");
+
+export const configuracion = Object.freeze({
+  puerto,
+  jwt: Object.freeze({
+    secreto: secretoJwt,
+    duracionSegundos: duracionTokenSegundos
+  }),
+  limiteCuerpoBytes,
+  formatoRegistro: obtenerTexto("MORGAN_FORMAT"),
+  rutaInterfaz: path.resolve(rutaBackend, obtenerTexto("FRONTEND_PATH"))
+});
+</file>
+
+<file path="backend/src/controladores/asientos.controlador.ts">
+import type { Request, Response, NextFunction } from "express";
+import { crearRespuesta } from "../comun/respuesta-http";
+import { AsientosServicio } from "../servicios/asientos.servicio";
+
+export class AsientosControlador {
+  constructor(private readonly servicio: AsientosServicio) {}
+
+  listarDisponibles = async (
+    solicitud: Request,
+    respuesta: Response,
+    siguiente: NextFunction
+  ) => {
+    try {
+      const funcionId = solicitud.query.funcionId ? Number(solicitud.query.funcionId) : undefined;
+      const asientos = await this.servicio.listarDisponibles(Number.isFinite(funcionId) ? funcionId : undefined);
+      return respuesta.status(200).json(
+        crearRespuesta(true, "Los asientos disponibles se consultaron correctamente.", asientos)
+      );
+    } catch (error) {
+      return siguiente(error);
+    }
+  };
+}
+</file>
+
+<file path="backend/src/controladores/reserva.controlador.ts">
+import type { Request, Response, NextFunction } from "express";
+import { crearRespuesta } from "../comun/respuesta-http";
+import { CrearReservaDto } from "../dto/crear-reserva.dto";
+import { ReservaServicio } from "../servicios/reserva.servicio";
+
+export class ReservaControlador {
+  constructor(private readonly servicio: ReservaServicio) {}
+
+  crear = async (
+    solicitud: Request<unknown, unknown, CrearReservaDto>,
+    respuesta: Response,
+    siguiente: NextFunction
+  ) => {
+    try {
+      const resultado = this.servicio.procesar(solicitud.body);
+      return respuesta.status(200).json(
+        crearRespuesta(true, "La reserva se registró correctamente.", resultado)
+      );
+    } catch (error) {
+      return siguiente(error);
+    }
+  };
+}
+</file>
+
+<file path="backend/src/mocks/mock-datos.ts">
+export interface UsuarioMock {
+  id: number;
+  nombres: string;
+  apellidos: string;
+  correoElectronico: string;
+  contrasena: string;
+}
+
+export interface PeliculaMock {
+  id: number;
+  titulo: string;
+  sinopsis: string;
+  generos: string[];
+  duracionMinutos: number;
+  clasificacion: string;
+  poster: string;
+}
+
+export interface FuncionMock {
+  id: number;
+  peliculaId: number;
+  salaId: number;
+  fechaHoraInicio: string;
+  precio: number;
+}
+
+export interface SalaMock {
+  id: number;
+  nombre: string;
+  filas: string[];
+  columnas: number;
+}
+
+export interface AsientoMock {
+  id: string;
+  salaId: number;
+  fila: string;
+  numero: number;
+  estado: "disponible" | "ocupado" | "reservado";
+  precio: number;
+}
+
+export const CREDENCIALES_MOCK = Object.freeze({
+  usuario: "edwin@gmail.com",
+  contrasena: "edwin1234567"
+});
+
+const titulosPeliculas = [
+  "Dune: Parte dos", "Misión imposible: Sentencia final", "Inside Out 2", "Kung Fu Panda 4",
+  "Oppenheimer", "Wicked", "A Quiet Place: Day One", "The Batman", "Avatar: El sentido del agua",
+  "Wonka", "Napoleón", "Bob Marley: One Love", "Madame Web", "The Hunger Games: Balada de pájaros cantores y serpientes",
+  "La Monja II", "Matrix Resurrections", "The Flash", "The Marvels", "The Little Mermaid", "Shrek 5",
+  "Spider-Man: Across the Spider-Verse", "Spider-Man: No Way Home", "Guardians of the Galaxy Vol. 3",
+  "Barbie", "Elemental", "Kung Fu Panda 3", "Trolls Band Together", "The Super Mario Bros. Movie",
+  "Toy Story 4", "Zootopia", "Ratatouille", "Coco", "Encanto", "Moana", "Frozen II", "Incredibles 2",
+  "Lightyear", "Turning Red", "Soul", "Luca", "Inside Out", "The Good Dinosaur", "Cars", "Up",
+  "The Avengers", "Titanic", "Interstellar", "Inception", "Tenet", "Dunkirk", "Arrival", "Blade Runner 2049",
+  "Ex Machina", "Her", "La La Land", "No Time to Die", "Skyfall", "Casino Royale", "Indiana Jones y el dial del destino",
+  "Indiana Jones y la última cruzada", "Jurassic World Dominion", "Jurassic Park", "Jurassic World", "The Lion King",
+  "The Jungle Book", "Beauty and the Beast", "Aladdin", "Mulan", "Frozen", "Tangled", "Brave", "Big Hero 6",
+  "Coco", "ParaNorman", "Hotel Transylvania", "Minions", "Despicable Me 4", "Despicable Me", "Sing", "Sing 2",
+  "Transformers: El despunte de las bestias", "Transformers: Age of Extinction", "Avatar", "Avatar 2", "Star Wars: El ascenso de Skywalker",
+  "Star Wars: El despertar de la Fuerza", "Star Wars: Los últimos Jedi", "Star Wars: El regreso del Jedi", "Star Trek: Beyond",
+  "Star Trek: Into Darkness", "Star Trek", "John Wick 4", "John Wick 3", "John Wick 2", "John Wick",
+  "The Equalizer 3", "The Equalizer 2", "The Equalizer", "Nope", "Us", "Get Out", "Parasite",
+  "The Batman", "The Dark Knight", "The Dark Knight Rises", "Batman Begins", "Hacksaw Ridge", "1917",
+  "The Greatest Showman", "Bohemian Rhapsody", "Rocketman", "Whiplash", "La forma del agua", "The Shape of Water"
+];
+
+const sinopsisBase = [
+  "Un viaje épico lleno de tensión, emoción y decisiones inesperadas.",
+  "Una historia intensa sobre coraje, sacrificio y descubrimiento personal.",
+  "La aventura comienza cuando cada detalle cambia la vida de los personajes.",
+  "Una experiencia cinematográfica profunda, visualmente impactante y emocionalmente intensa.",
+  "Un relato contemporáneo con giros narrativos, acción y una gran carga humana.",
+  "Una odisea moderna llena de misterio, valentía y transformaciones sorprendentes.",
+  "Cuando la realidad se altera, el destino exige respuestas imposibles.",
+  "Una aventura moderna que combina emoción, riesgo y un enorme sentido de identidad."
+];
+
+const generosCatalogo = [
+  "Acción", "Drama", "Ciencia ficción", "Animación", "Aventura", "Comedia", "Suspenso",
+  "Fantasía", "Romance", "Crimen", "Terror", "Musical", "Documental"
+];
+
+const salas: SalaMock[] = Array.from({ length: 8 }, (_, index) => ({
+  id: index + 1,
+  nombre: `Sala ${index + 1}`,
+  filas: ["A", "B", "C", "D", "E"],
+  columnas: 10
+}));
+
+export const usuariosMock: UsuarioMock[] = [
+  {
+    id: 1001,
+    nombres: "Edwin",
+    apellidos: "Martinez",
+    correoElectronico: "edwin@gmail.com",
+    contrasena: "edwin1234567"
+  }
+];
+
+export const peliculasMock: PeliculaMock[] = Array.from({ length: 120 }, (_, index) => {
+  const titulo = titulosPeliculas[index % titulosPeliculas.length];
+  const generos = [
+    generosCatalogo[index % generosCatalogo.length],
+    generosCatalogo[(index + 2) % generosCatalogo.length],
+    generosCatalogo[(index + 5) % generosCatalogo.length]
+  ];
+  const duracion = 90 + ((index * 13) % 95);
+
+  return {
+    id: index + 1,
+    titulo: `${titulo}${index > titulosPeliculas.length - 1 ? ` ${Math.floor(index / titulosPeliculas.length) + 1}` : ""}`,
+    sinopsis: `${sinopsisBase[index % sinopsisBase.length]} Una narrativa moderna con ritmo intenso para el público que disfruta la experiencia de cine en sala.`,
+    generos,
+    duracionMinutos: duracion,
+    clasificacion: index % 3 === 0 ? "PG-13" : index % 2 === 0 ? "PG" : "R",
+    poster: `https://images.example.com/posters/${String(index + 1).padStart(3, "0")}.jpg`
+  };
+});
+
+export const funcionesMock: FuncionMock[] = Array.from({ length: 120 }, (_, index) => {
+  const peliculaId = (index % peliculasMock.length) + 1;
+  const salaId = (index % salas.length) + 1;
+  const horaBase = new Date();
+  horaBase.setHours(12 + (index % 10), (index * 11) % 60, 0, 0);
+  horaBase.setDate(horaBase.getDate() + (index % 6));
+
+  return {
+    id: index + 1,
+    peliculaId,
+    salaId,
+    fechaHoraInicio: horaBase.toISOString(),
+    precio: 18000 + ((index * 3750) % 16000)
+  };
+});
+
+export const asientosMock: AsientoMock[] = salas.flatMap((sala) =>
+  sala.filas.flatMap((fila) =>
+    Array.from({ length: sala.columnas }, (_, numero) => {
+      const numeroAsiento = numero + 1;
+      const index = ((sala.id - 1) * sala.filas.length * sala.columnas) + ((sala.filas.indexOf(fila) * sala.columnas) + numeroAsiento);
+      const estado = index % 11 === 0 ? "ocupado" : index % 7 === 0 ? "reservado" : "disponible";
+      return {
+        id: `${fila}${numeroAsiento}`,
+        salaId: sala.id,
+        fila,
+        numero: numeroAsiento,
+        estado,
+        precio: 20000 + ((sala.id * 1000) % 7000)
+      };
+    })
+  )
+);
+
+const ocupacionAsientosPorFuncion: Record<number, Set<string>> = Object.fromEntries(
+  funcionesMock.map((funcion) => [funcion.id, new Set<string>()])
+);
+
+for (const funcion of funcionesMock) {
+  const asientosEnFuncion = asientosMock.filter((asiento) => {
+    const indiceAsiento = ((asiento.salaId - 1) * 5 * 10) + ((salas.findIndex((sala) => sala.id === asiento.salaId) * 50) + (asiento.numero - 1));
+    return (funcion.id + indiceAsiento) % 17 === 0 || (funcion.id * asiento.numero + asiento.salaId) % 23 === 0;
+  });
+
+  ocupacionAsientosPorFuncion[funcion.id] = new Set(asientosEnFuncion.map((asiento) => asiento.id));
+}
+
+export const mockStore = {
+  usuarios: usuariosMock,
+  peliculas: peliculasMock,
+  salas,
+  funciones: funcionesMock,
+  asientos: asientosMock,
+  ocupacionAsientosPorFuncion
+};
+
+export function reservarAsientosEnFuncion(funcionId: number, asientosSeleccionados: string[]): Set<string> {
+  const funcionKey = Number(funcionId);
+  const reservas = mockStore.ocupacionAsientosPorFuncion[funcionKey] ?? new Set<string>();
+  for (const asientoId of asientosSeleccionados) {
+    reservas.add(asientoId);
+  }
+  mockStore.ocupacionAsientosPorFuncion[funcionKey] = reservas;
+  return reservas;
+}
+
+export function listarAsientosOcupadosPorFuncion(funcionId: number): Set<string> {
+  const funcionKey = Number(funcionId);
+  return new Set(mockStore.ocupacionAsientosPorFuncion[funcionKey] ?? []);
+}
+</file>
+
+<file path="backend/src/mocks/pasarela-pagos.mock.ts">
+export type TipoTarjeta = "visa" | "mastercard" | "amex" | "diners";
+
+export interface PagoMockRequest {
+  numeroTarjeta: string;
+  nombreTitular: string;
+  mesExpiracion: string;
+  anioExpiracion: string;
+  cvv: string;
+  monto: number;
+  moneda?: string;
+  tipoTarjeta?: TipoTarjeta;
+  correoElectronico?: string;
+}
+
+export interface RespuestaPagoMock {
+  aprobado: boolean;
+  codigoHttp: number;
+  codigo: string;
+  mensaje: string;
+  idTransaccion: string;
+  monto: number;
+  moneda: string;
+  tipoTarjeta: TipoTarjeta;
+}
+
+const TARJETAS_PERMITIDAS: Record<TipoTarjeta, { patron: RegExp; longitud: number[] }> = {
+  visa: { patron: /^4\d{12}(\d{3})?$/, longitud: [13, 16, 19] },
+  mastercard: { patron: /^5[1-5]\d{14}$/, longitud: [16] },
+  amex: { patron: /^3[47]\d{13}$/, longitud: [15] },
+  diners: { patron: /^3(?:0[0-5]|[68]\d)\d{11}$/, longitud: [14, 16] }
+};
+
+const TARJETA_FONDOS_INSUFICIENTES = "5555555555554444";
+
+function normalizarNumeroTarjeta(valor: string): string {
+  return valor.replace(/\s+/g, "").replace(/-/g, "");
+}
+
+function obtenerTipoTarjeta(numero: string): TipoTarjeta | null {
+  const tarjeta = (Object.entries(TARJETAS_PERMITIDAS) as Array<[TipoTarjeta, { patron: RegExp; longitud: number[] }]>).find(
+    ([, detalle]) => detalle.patron.test(numero)
+  );
+
+  return tarjeta ? tarjeta[0] : null;
+}
+
+export class PasarelaPagosMock {
+  procesarPago(datos: PagoMockRequest): RespuestaPagoMock {
+    const numero = normalizarNumeroTarjeta(datos.numeroTarjeta ?? "");
+    const tipoTarjeta = datos.tipoTarjeta ?? obtenerTipoTarjeta(numero);
+
+    if (!numero || !/^\d+$/.test(numero)) {
+      return {
+        aprobado: false,
+        codigoHttp: 400,
+        codigo: "invalid_card_number",
+        mensaje: "El número de tarjeta es obligatorio y debe contener únicamente dígitos.",
+        idTransaccion: "",
+        monto: datos.monto,
+        moneda: datos.moneda ?? "COP",
+        tipoTarjeta: tipoTarjeta ?? "visa"
+      };
+    }
+
+    if (!tipoTarjeta) {
+      return {
+        aprobado: false,
+        codigoHttp: 422,
+        codigo: "unsupported_card",
+        mensaje: "La tarjeta no es compatible con la pasarela de pruebas.",
+        idTransaccion: "",
+        monto: datos.monto,
+        moneda: datos.moneda ?? "COP",
+        tipoTarjeta: "visa"
+      };
+    }
+
+    const longitudValida = TARJETAS_PERMITIDAS[tipoTarjeta].longitud.includes(numero.length);
+    if (!longitudValida) {
+      return {
+        aprobado: false,
+        codigoHttp: 422,
+        codigo: "invalid_card_length",
+        mensaje: "La longitud de la tarjeta no coincide con el tipo de tarjeta permitido.",
+        idTransaccion: "",
+        monto: datos.monto,
+        moneda: datos.moneda ?? "COP",
+        tipoTarjeta
+      };
+    }
+
+    const nombreTitular = (datos.nombreTitular ?? "").trim();
+    if (!nombreTitular || nombreTitular.length < 3) {
+      return {
+        aprobado: false,
+        codigoHttp: 400,
+        codigo: "invalid_cardholder",
+        mensaje: "El nombre del titular es obligatorio.",
+        idTransaccion: "",
+        monto: datos.monto,
+        moneda: datos.moneda ?? "COP",
+        tipoTarjeta
+      };
+    }
+
+    const mes = Number.parseInt(datos.mesExpiracion ?? "0", 10);
+    const anio = Number.parseInt(datos.anioExpiracion ?? "0", 10);
+    const anioCompleto = anio < 100 ? 2000 + anio : anio;
+    const hoy = new Date();
+    const fechaExpiracion = new Date(anioCompleto, mes, 0, 23, 59, 59, 999);
+
+    if (!Number.isFinite(mes) || mes < 1 || mes > 12 || !Number.isFinite(anio) || fechaExpiracion < hoy) {
+      return {
+        aprobado: false,
+        codigoHttp: 402,
+        codigo: "expired_card",
+        mensaje: "La tarjeta está vencida o la fecha de expiración no es válida.",
+        idTransaccion: "",
+        monto: datos.monto,
+        moneda: datos.moneda ?? "COP",
+        tipoTarjeta
+      };
+    }
+
+    const cvv = String(datos.cvv ?? "").trim();
+    const longitudCvvEsperada = tipoTarjeta === "amex" ? 4 : 3;
+    if (!/^\d+$/.test(cvv) || cvv.length !== longitudCvvEsperada) {
+      return {
+        aprobado: false,
+        codigoHttp: 402,
+        codigo: "invalid_cvv",
+        mensaje: `El CVV es inválido. Debe contener ${longitudCvvEsperada} dígitos para ${tipoTarjeta}.`,
+        idTransaccion: "",
+        monto: datos.monto,
+        moneda: datos.moneda ?? "COP",
+        tipoTarjeta
+      };
+    }
+
+    if (datos.monto <= 0) {
+      return {
+        aprobado: false,
+        codigoHttp: 400,
+        codigo: "invalid_amount",
+        mensaje: "El monto de la transacción debe ser mayor a cero.",
+        idTransaccion: "",
+        monto: datos.monto,
+        moneda: datos.moneda ?? "COP",
+        tipoTarjeta
+      };
+    }
+
+    if (numero === TARJETA_FONDOS_INSUFICIENTES || datos.monto > 2500000) {
+      return {
+        aprobado: false,
+        codigoHttp: 402,
+        codigo: "insufficient_funds",
+        mensaje: "La tarjeta no tiene fondos suficientes para cubrir la transacción.",
+        idTransaccion: "",
+        monto: datos.monto,
+        moneda: datos.moneda ?? "COP",
+        tipoTarjeta
+      };
+    }
+
+    if (datos.correoElectronico && datos.correoElectronico.toLowerCase() !== "edwin@gmail.com") {
+      return {
+        aprobado: false,
+        codigoHttp: 403,
+        codigo: "fraud_detected",
+        mensaje: "La transacción fue marcada como sospechosa por fraude.",
+        idTransaccion: "",
+        monto: datos.monto,
+        moneda: datos.moneda ?? "COP",
+        tipoTarjeta
+      };
+    }
+
+    return {
+      aprobado: true,
+      codigoHttp: 200,
+      codigo: "approved",
+      mensaje: "La transacción fue aprobada correctamente.",
+      idTransaccion: `CF-${Date.now()}`,
+      monto: datos.monto,
+      moneda: datos.moneda ?? "COP",
+      tipoTarjeta
+    };
+  }
+}
+</file>
+
+<file path="backend/src/servicios/cartelera.servicio.ts">
+import { mockStore } from "../mocks/mock-datos";
+
+export class CarteleraServicio {
+  async listar(): Promise<Array<{ id: number; titulo: string; sinopsis: string; generos: string[]; duracionMinutos: number; clasificacion: string; poster: string }>> {
+    return mockStore.peliculas.map((pelicula) => ({
+      id: pelicula.id,
+      titulo: pelicula.titulo,
+      sinopsis: pelicula.sinopsis,
+      generos: pelicula.generos,
+      duracionMinutos: pelicula.duracionMinutos,
+      clasificacion: pelicula.clasificacion,
+      poster: pelicula.poster
+    }));
+  }
+}
+</file>
+
+<file path="backend/src/app.ts">
+import express from "express";
+import helmet from "helmet";
+import morgan from "morgan";
+import { configuracion } from "./configuracion/entorno";
+import { manejarErrores, rutaNoEncontrada } from "./middlewares/errores.middleware";
+import rutas from "./rutas/api.rutas";
+
+export const app = express();
+
+app.disable("x-powered-by");
+app.use((solicitud, respuesta, siguiente) => {
+  respuesta.setHeader("Access-Control-Allow-Origin", "*");
+  respuesta.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  respuesta.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (solicitud.method === "OPTIONS") {
+    return respuesta.sendStatus(204);
+  }
+  return siguiente();
+});
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:"],
+        connectSrc: ["'self'", "http://localhost:3000"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        frameAncestors: ["'none'"]
+      }
+    },
+    crossOriginResourcePolicy: { policy: "same-site" },
+    referrerPolicy: { policy: "no-referrer" }
+  })
+);
+
+app.use(
+  morgan((tokens, solicitud, respuesta) => {
+    const metodo = tokens.method(solicitud, respuesta) ?? "-";
+    const ruta = tokens.url(solicitud, respuesta) ?? "-";
+    const estado = tokens.status(solicitud, respuesta) ?? "-";
+    const duracion = tokens["response-time"](solicitud, respuesta) ?? "0";
+    const direccion = tokens["remote-addr"](solicitud, respuesta) ?? "-";
+    const agente = tokens["user-agent"](solicitud, respuesta) ?? "-";
+
+    return `${new Date().toISOString()} | ${metodo} ${ruta} | ${estado} | ${duracion}ms | ${direccion} | ${agente}`;
+  })
+);
+app.use(express.json({ limit: configuracion.limiteCuerpoBytes }));
+app.use(express.static(configuracion.rutaInterfaz));
+app.use(rutas);
+app.use(rutaNoEncontrada);
+app.use(manejarErrores);
+</file>
+
+<file path="backend/src/servidor.ts">
+import { app } from "./app";
+import { configuracion } from "./configuracion/entorno";
+
+export async function iniciarServidor(): Promise<void> {
+  app.listen(configuracion.puerto, () => {
+    console.log(`CineFlex mock está disponible en el puerto ${configuracion.puerto}.`);
+  });
+}
+
+if (require.main === module) {
+  iniciarServidor().catch((error: unknown) => {
+    console.error("No fue posible iniciar CineFlex en modo mock.", error);
+    process.exitCode = 1;
+  });
+}
+</file>
+
+<file path="backend/tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "rootDir": "src",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*.ts"]
+}
+</file>
+
+<file path="backend/src/dto/crear-reserva.dto.ts">
+import { Expose, Transform } from "class-transformer";
+import {
+  IsIn,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+  Min
+} from "class-validator";
+
+export class CrearReservaDto {
+  @Expose({ name: "cardNumber" })
+  @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
+  @IsString({ message: "El número de tarjeta debe enviarse como texto." })
+  @IsNotEmpty({ message: "Se requiere un número de tarjeta de prueba." })
+  @Matches(/^\d{13,19}$/, { message: "El número de tarjeta debe tener entre 13 y 19 dígitos." })
+  numeroTarjeta!: string;
+
+  @Expose({ name: "cardHolder" })
+  @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
+  @IsString({ message: "El nombre del titular debe ser texto." })
+  @IsNotEmpty({ message: "El nombre del titular es obligatorio." })
+  @MaxLength(120, { message: "El nombre del titular no puede superar 120 caracteres." })
+  nombreTitular!: string;
+
+  @Expose({ name: "expiryMonth" })
+  @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
+  @IsString({ message: "El mes de expiración debe ser texto." })
+  @Length(1, 2, { message: "El mes de expiración debe tener 1 o 2 dígitos." })
+  @Matches(/^(0?[1-9]|1[0-2])$/, { message: "El mes de expiración debe estar entre 01 y 12." })
+  mesExpiracion!: string;
+
+  @Expose({ name: "expiryYear" })
+  @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
+  @IsString({ message: "El año de expiración debe ser texto." })
+  @Matches(/^\d{2,4}$/, { message: "El año de expiración debe tener 2 o 4 dígitos." })
+  anioExpiracion!: string;
+
+  @Expose({ name: "cvv" })
+  @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
+  @IsString({ message: "El CVV debe ser texto." })
+  @Matches(/^\d{3,4}$/, { message: "El CVV debe contener 3 o 4 dígitos." })
+  cvv!: string;
+
+  @Expose({ name: "amount" })
+  @Transform(({ value }) => typeof value === "string" || typeof value === "number" ? Number(value) : value)
+  @IsNumber({}, { message: "El monto debe ser numérico." })
+  @Min(1, { message: "El monto debe ser mayor que cero." })
+  monto!: number;
+
+  @Expose({ name: "currency" })
+  @Transform(({ value }) => typeof value === "string" ? value.trim().toUpperCase() : value)
+  @IsString({ message: "La moneda debe enviarse como texto." })
+  @IsIn(["COP", "USD", "EUR"], { message: "La moneda debe ser COP, USD o EUR." })
+  moneda!: string;
+
+  @Expose({ name: "cardType" })
+  @Transform(({ value }) => typeof value === "string" ? value.trim().toLowerCase() : value)
+  @IsString({ message: "El tipo de tarjeta debe ser texto." })
+  @IsIn(["visa", "mastercard", "amex", "diners"], { message: "El tipo de tarjeta no es válido." })
+  tipoTarjeta!: string;
+
+  @Expose({ name: "email" })
+  @Transform(({ value }) => typeof value === "string" ? value.trim().toLowerCase() : value)
+  @IsString({ message: "El correo debe ser texto." })
+  @IsNotEmpty({ message: "El correo del pagador es obligatorio." })
+  correoElectronico!: string;
+
+  @Expose({ name: "funcionId" })
+  @Transform(({ value }) => value === undefined || value === null ? undefined : Number(value))
+  @IsOptional()
+  @IsNumber({}, { message: "La función debe ser numérica." })
+  funcionId?: number;
+
+  @Expose({ name: "asientos" })
+  @Transform(({ value }) => Array.isArray(value) ? value.map((item: unknown) => String(item)) : value)
+  @IsOptional()
+  @IsString({ each: true, message: "Los asientos deben ser identificadores de texto." })
+  asientos?: string[];
+}
+</file>
+
+<file path="backend/src/rutas/api.rutas.ts">
+import { Router } from "express";
+import { AsientosControlador } from "../controladores/asientos.controlador";
+import { AutenticacionControlador } from "../controladores/autenticacion.controlador";
+import { CarteleraControlador } from "../controladores/cartelera.controlador";
+import { ReservaControlador } from "../controladores/reserva.controlador";
+import { CrearReservaDto } from "../dto/crear-reserva.dto";
+import { InicioSesionDto } from "../dto/inicio-sesion.dto";
+import { validarDto } from "../dto/validar-dto";
+import { requerirToken } from "../middlewares/autenticacion.middleware";
+import { AsientosServicio } from "../servicios/asientos.servicio";
+import { CarteleraServicio } from "../servicios/cartelera.servicio";
+import { InicioSesionServicio } from "../servicios/inicio-sesion.servicio";
+import { ReservaServicio } from "../servicios/reserva.servicio";
+import { crearRespuesta } from "../comun/respuesta-http";
+
+const rutas = Router();
+const autenticacion = new AutenticacionControlador(new InicioSesionServicio());
+const cartelera = new CarteleraControlador(new CarteleraServicio());
+const asientos = new AsientosControlador(new AsientosServicio());
+const reservas = new ReservaControlador(new ReservaServicio());
+
+rutas.get("/health", (_solicitud, respuesta) => {
+  respuesta.status(200).json(
+    crearRespuesta(true, "El servicio está disponible.", { estado: "disponible" })
+  );
+});
+rutas.post("/login", validarDto(InicioSesionDto), autenticacion.iniciarSesion);
+rutas.get("/cartelera", requerirToken, cartelera.listar);
+rutas.get("/asientos/disponibles", asientos.listarDisponibles);
+rutas.post("/reserva", requerirToken, validarDto(CrearReservaDto), reservas.crear);
+rutas.post("/pagos/mock", requerirToken, validarDto(CrearReservaDto), reservas.crear);
+
+export default rutas;
+</file>
+
+<file path="backend/src/servicios/asientos.servicio.ts">
+import { listarAsientosOcupadosPorFuncion, mockStore } from "../mocks/mock-datos";
+
+export class AsientosServicio {
+  async listarDisponibles(funcionId?: number): Promise<Array<{ id: string; disponible: boolean }>> {
+    const ocupados = funcionId ? listarAsientosOcupadosPorFuncion(funcionId) : new Set<string>();
+
+    return mockStore.asientos
+      .filter((asiento) => asiento.estado === "disponible" || asiento.estado === "reservado")
+      .map((asiento) => ({
+        id: asiento.id,
+        disponible: !ocupados.has(asiento.id) && asiento.estado !== "ocupado"
+      }));
+  }
+
+  registrarOcupacion(funcionId: number, asientos: string[]): Set<string> {
+    const ocupados = new Set(listarAsientosOcupadosPorFuncion(funcionId));
+    for (const asientoId of asientos) {
+      ocupados.add(asientoId);
+    }
+
+    return new Set(Array.from(ocupados));
+  }
+}
+</file>
+
+<file path="backend/src/servicios/inicio-sesion.servicio.ts">
+import { ErrorAplicacion } from "../comun/error-aplicacion";
+import { InicioSesionDto } from "../dto/inicio-sesion.dto";
+import { CREDENCIALES_MOCK, mockStore } from "../mocks/mock-datos";
+import { crearToken } from "./autenticacion.servicio";
+
+const intentosFallidos = new Map<string, { contador: number; bloqueadoHasta: number }>();
+
+function obtenerBloqueoActual(correo: string): { contador: number; bloqueadoHasta: number } {
+  const bloqueo = intentosFallidos.get(correo);
+  if (!bloqueo) {
+    return { contador: 0, bloqueadoHasta: 0 };
+  }
+
+  if (bloqueo.bloqueadoHasta === 0 || bloqueo.bloqueadoHasta > Date.now()) {
+    return bloqueo;
+  }
+
+  intentosFallidos.delete(correo);
+  return { contador: 0, bloqueadoHasta: 0 };
+}
+
+export class InicioSesionServicio {
+  async iniciar(datos: InicioSesionDto): Promise<{
+    usuario: { id: number; correoElectronico: string };
+    token: string;
+  }> {
+    const correoNormalizado = datos.correoElectronico.trim().toLowerCase();
+    const contrasenaNormalizada = datos.contrasena.trim();
+    const bloqueo = obtenerBloqueoActual(correoNormalizado);
+
+    if (bloqueo.bloqueadoHasta > Date.now()) {
+      throw new ErrorAplicacion(
+        "La cuenta está bloqueada temporalmente por demasiados intentos fallidos. Inténtalo más tarde.",
+        423
+      );
+    }
+
+    const usuario = mockStore.usuarios.find(
+      (item) => item.correoElectronico.toLowerCase() === correoNormalizado
+    );
+
+    const credencialesValidas =
+      correoNormalizado === CREDENCIALES_MOCK.usuario.toLowerCase() &&
+      contrasenaNormalizada === CREDENCIALES_MOCK.contrasena;
+
+    const usuarioActivo = usuario ?? mockStore.usuarios[0];
+    const credencialesIncorrectas = Boolean(usuarioActivo) && usuarioActivo.contrasena !== contrasenaNormalizada;
+
+    if ((!usuario && !credencialesValidas) || (usuarioActivo && !credencialesValidas && credencialesIncorrectas)) {
+      const siguienteIntento = obtenerBloqueoActual(correoNormalizado);
+      const contador = siguienteIntento.contador + 1;
+      const bloqueoTemporalMs = contador >= 3 ? 5 * 60 * 1000 : 30 * 1000;
+      intentosFallidos.set(correoNormalizado, {
+        contador,
+        bloqueadoHasta: contador >= 3 ? Date.now() + bloqueoTemporalMs : 0
+      });
+
+      if (contador >= 3) {
+        throw new ErrorAplicacion(
+          "Se superó el límite de intentos. La cuenta quedó bloqueada temporalmente durante 5 minutos.",
+          423
+        );
+      }
+
+      throw new ErrorAplicacion(
+        "El correo electrónico o la contraseña no son correctos.",
+        401
+      );
+    }
+
+    intentosFallidos.delete(correoNormalizado);
+
+    return {
+      usuario: {
+        id: usuarioActivo.id,
+        correoElectronico: usuarioActivo.correoElectronico
+      },
+      token: crearToken(String(usuarioActivo.id))
+    };
+  }
+}
+</file>
+
+<file path="backend/src/servicios/reserva.servicio.ts">
+import { ErrorAplicacion } from "../comun/error-aplicacion";
+import { CrearReservaDto } from "../dto/crear-reserva.dto";
+import { mockStore, reservarAsientosEnFuncion } from "../mocks/mock-datos";
+import { PasarelaPagosMock, type TipoTarjeta } from "../mocks/pasarela-pagos.mock";
+
+export interface ResultadoReserva {
+  idTransaccion: string;
+  codigo: string;
+  estado: "aprobado" | "rechazado";
+  monto: number;
+  moneda: string;
+  mensaje: string;
+}
+
+export class ReservaServicio {
+  procesar(datos: CrearReservaDto & { funcionId?: number; asientos?: string[] }): ResultadoReserva {
+    const pasarela = new PasarelaPagosMock();
+    const pago = pasarela.procesarPago({
+      numeroTarjeta: datos.numeroTarjeta,
+      nombreTitular: datos.nombreTitular,
+      mesExpiracion: datos.mesExpiracion,
+      anioExpiracion: datos.anioExpiracion,
+      cvv: datos.cvv,
+      monto: datos.monto,
+      moneda: datos.moneda,
+      tipoTarjeta: datos.tipoTarjeta as TipoTarjeta,
+      correoElectronico: datos.correoElectronico
+    });
+
+    if (!pago.aprobado) {
+      throw new ErrorAplicacion(pago.mensaje, pago.codigoHttp);
+    }
+
+    if (datos.funcionId && datos.asientos && datos.asientos.length > 0) {
+      const ocupados = reservarAsientosEnFuncion(datos.funcionId, datos.asientos);
+      for (const asiento of mockStore.asientos) {
+        if (ocupados.has(asiento.id)) {
+          asiento.estado = 'ocupado';
+        }
+      }
+    }
+
+    return {
+      idTransaccion: pago.idTransaccion,
+      codigo: pago.codigo,
+      estado: 'aprobado',
+      monto: pago.monto,
+      moneda: pago.moneda,
+      mensaje: pago.mensaje
+    };
+  }
+}
+</file>
+
+<file path="frontend/styles.css">
+:root {
+  --bg: #f5f5f5;
+  --bg-strong: #fafafa;
+  --panel: #ffffff;
+  --panel-alt: #f3f3f3;
+  --line: #e0e0e0;
+  --line-strong: #cfcfcf;
+  --text: #111111;
+  --muted: #757575;
+  --soft: #efefef;
+  --shadow: rgba(17, 17, 17, 0.08);
+  --black: #111111;
+  --success: #1f1f1f;
+  --success-soft: #e8e8e8;
+  --danger: #3a3a3a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1.15rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 30px var(--shadow);
+}
+
+.brand-block {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.topbar-actions,
+.header-actions,
+.confirmation-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.main-layout {
+  display: grid;
+}
+
+.view {
+  width: 100%;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.panel {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.75rem;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--panel);
+  box-shadow: 0 18px 50px var(--shadow);
+}
+
+.auth-panel {
+  max-width: 440px;
+}
+
+.panel-header {
+  margin-bottom: 1.4rem;
+}
+
+.split-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel-alt);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.42rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--bg-strong);
+  color: var(--text);
+  padding: 0.9rem 1rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.06);
+}
+
+.primary-button,
+.secondary-button,
+.ghost-button {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 0.82rem 1.15rem;
+  font-weight: 700;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.primary-button {
+  background: var(--black);
+  color: #ffffff;
+}
+
+.secondary-button {
+  background: var(--panel-alt);
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.ghost-button {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.primary-button:hover,
+.secondary-button:hover,
+.ghost-button:hover {
+  transform: translateY(-1px);
+}
+
+.alert {
+  margin-top: 1rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
+}
+
+.alert.error {
+  background: rgba(17, 17, 17, 0.04);
+  border-color: rgba(17, 17, 17, 0.12);
+  color: var(--text);
+}
+
+.movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.movie-card {
+  display: grid;
+  gap: 0.8rem;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel-alt);
+  padding: 1rem;
+  text-align: left;
+  color: var(--text);
+  box-shadow: 0 6px 18px rgba(17, 17, 17, 0.04);
+}
+
+.movie-card.selected {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.08);
+}
+
+.movie-poster {
+  display: grid;
+  place-items: center;
+  height: 170px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #232323, #484848);
+  color: #ffffff;
+  font-size: 2.5rem;
+}
+
+.movie-card h3 {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+}
+
+.movie-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.screen {
+  margin: 1.1rem 0 1.4rem;
+  padding: 0.8rem 1rem;
+  text-align: center;
+  border-radius: 16px 16px 28px 28px;
+  background: linear-gradient(180deg, #d9d9d9, #b5b5b5);
+  color: var(--text);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.seat-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.seat-button {
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--text);
+  padding: 0.75rem 0.3rem;
+  font-weight: 700;
+}
+
+.seat-button:hover {
+  border-color: var(--text);
+}
+
+.seat-button.selected {
+  background: var(--black);
+  border-color: var(--black);
+  color: #ffffff;
+}
+
+.seat-button.occupied {
+  background: var(--soft);
+  border-color: var(--line);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.selection-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.2rem;
+  padding: 0.95rem 1rem;
+  border-radius: 12px;
+  background: var(--bg-strong);
+  border: 1px solid var(--line);
+}
+
+.checkout-panel {
+  max-width: 980px;
+}
+
+.checkout-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.checkout-summary {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.2rem;
+  border-radius: 18px;
+  background: var(--bg-strong);
+  border: 1px solid var(--line);
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--muted);
+}
+
+.summary-item strong {
+  color: var(--text);
+  text-align: right;
+}
+
+.total-row {
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.confirmation-panel {
+  max-width: 540px;
+}
+
+.confirmation-detail {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  background: var(--bg-strong);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+@media (max-width: 760px) {
+  .topbar,
+  .split-header {
+    display: grid;
+  }
+
+  .checkout-grid,
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .seat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+</file>
+
+<file path="ui_tests/test_suite.js">
+const { Builder, By, until } = require('selenium-webdriver');
+const chrome = require('selenium-webdriver/chrome');
+const LoginPage = require('./pages/LoginPage');
+const CarteleraPage = require('./pages/CarteleraPage');
+const ReservaPage = require('./pages/ReservaPage');
+
+async function construirDriver() {
+  const opciones = new chrome.Options();
+  opciones.addArguments('--no-sandbox');
+  opciones.addArguments('--disable-dev-shm-usage');
+  opciones.addArguments('--window-size=1440,1200');
+  opciones.addArguments('--headless=new');
+  return new Builder().forBrowser('chrome').setChromeOptions(opciones).build();
+}
+
+async function ejecutarCaso(nombre, fn) {
+  console.log(`\n[CASO ${nombre}]`);
+  await fn();
+  console.log(`✓ ${nombre}`);
+}
+
+async function ejecutarSuite() {
+  const driver = await construirDriver();
+  try {
+    const loginPage = new LoginPage(driver);
+    const carteleraPage = new CarteleraPage(driver);
+    const reservaPage = new ReservaPage(driver);
+
+    await ejecutarCaso('01_bloqueo_preventivo', async () => {
+      await loginPage.abrir();
+      for (let intento = 1; intento <= 3; intento += 1) {
+        await loginPage.ingresarCredenciales('bloqueo-ui@domain.com', `pass-${intento}`);
+        await loginPage.hacerLogin();
+      }
+
+      await driver.wait(async () => {
+        const mensaje = await loginPage.obtenerMensajeError();
+        return mensaje.toLowerCase().includes('bloqueada') || mensaje.toLowerCase().includes('bloqueo');
+      }, 15000, 'Se esperaba bloqueo después de tres intentos fallidos.');
+    });
+
+    await ejecutarCaso('02_login_exitoso', async () => {
+      await loginPage.abrir();
+      await loginPage.ingresarCredenciales('edwin@gmail.com', 'edwin1234567');
+      await loginPage.hacerLogin();
+      await driver.wait(until.elementLocated(By.id('catalog-view')), 10000);
+      const catalogo = await driver.findElement(By.id('catalog-view'));
+      const clase = await catalogo.getAttribute('class');
+      if (clase.includes('hidden')) {
+        throw new Error('La vista de cartelera no es visible.');
+      }
+    });
+
+    await ejecutarCaso('03_seleccion_pelicula', async () => {
+      const cards = await driver.findElements(By.css('[data-testid^="movie-card-"]'));
+      if (cards.length === 0) throw new Error('No hay películas disponibles.');
+      await cards[0].click();
+      await driver.wait(
+        until.elementIsVisible(driver.findElement(By.id('seat-view'))),
+        10000,
+        'La vista de asientos no apareció.'
+      );
+    });
+
+    await ejecutarCaso('04_compra_end_to_end', async () => {
+      await reservaPage.seleccionarPrimerAsientoDisponible();
+      await reservaPage.continuarAlPago();
+      await reservaPage.completarPago({
+        numero: '4242 4242 4242 4242',
+        titular: 'Edwin Martinez',
+        expiracion: '12/30',
+        cvv: '123'
+      });
+      await reservaPage.confirmarPago();
+      await driver.wait(
+        until.elementIsVisible(driver.findElement(By.id('confirmation-view'))),
+        15000,
+        'No apareció la confirmación después de procesar el pago.'
+      );
+    });
+
+    await ejecutarCaso('05_cierre_sesion_y_historial', async () => {
+      await loginPage.cerrarSesion();
+      await driver.wait(async () => {
+        const loginVisible = await driver.findElement(By.id('login-view')).getAttribute('class');
+        return !loginVisible.includes('hidden');
+      }, 10000, 'La vista login no apareció.');
+      await driver.navigate().back();
+      await driver.wait(async () => {
+        const loginVisible = await driver.findElement(By.id('login-view')).getAttribute('class');
+        return !loginVisible.includes('hidden');
+      }, 5000, 'El historial no bloqueó acceso sin sesión.');
+    });
+
+    await ejecutarCaso('06_login_nuevo_exitoso', async () => {
+      await loginPage.ingresarCredenciales('edwin@gmail.com', 'edwin1234567');
+      await loginPage.hacerLogin();
+      await driver.wait(until.elementLocated(By.id('catalog-view')), 10000);
+    });
+
+    await ejecutarCaso('07_persistencia_ocupacion_real', async () => {
+      await carteleraPage.seleccionarPrimeraPelicula();
+      await reservaPage.seleccionarPrimerAsientoDisponible();
+      await driver.navigate().back();
+      await driver.navigate().back();
+      await loginPage.cerrarSesion();
+      await loginPage.abrir();
+      await loginPage.ingresarCredenciales('edwin@gmail.com', 'edwin1234567');
+      await loginPage.hacerLogin();
+      await driver.findElements(By.css('[data-testid^="movie-card-"]'));
+    });
+
+    await ejecutarCaso('08_tarjeta_vencida', async () => {
+      await loginPage.cerrarSesion();
+      await loginPage.abrir();
+      await loginPage.ingresarCredenciales('edwin@gmail.com', 'edwin1234567');
+      await loginPage.hacerLogin();
+      await carteleraPage.seleccionarPrimeraPelicula();
+      await reservaPage.seleccionarPrimerAsientoDisponible();
+      await reservaPage.continuarAlPago();
+      await reservaPage.completarPago({
+        numero: '4555 1234 5678 9012',
+        titular: 'Edwin Martinez',
+        expiracion: '01/20',
+        cvv: '123'
+      });
+      await reservaPage.confirmarPago();
+      const mensaje = await driver.wait(async () => {
+        const texto = await driver.findElement(By.id('checkout-error')).getText();
+        return texto || false;
+      }, 10000, 'No se mostró un error para la tarjeta vencida.');
+      if (!mensaje.toLowerCase().includes('vencida') && !mensaje.toLowerCase().includes('expir')) {
+        throw new Error(`La tarjeta vencida produjo un mensaje inesperado: ${mensaje}`);
+      }
+    });
+
+    await ejecutarCaso('09_cvv_invalido', async () => {
+      await reservaPage.completarPago({
+        numero: '4555 1234 5678 9012',
+        titular: 'Edwin Martinez',
+        expiracion: '12/30',
+        cvv: '1234'
+      });
+      await reservaPage.confirmarPago();
+      await driver.wait(async () => {
+        const mensaje = await driver.findElement(By.id('checkout-error')).getText();
+        return mensaje.toLowerCase().includes('cvv');
+      }, 10000, 'No se validó el CVV.');
+    });
+
+    await ejecutarCaso('10_fondos_insuficientes', async () => {
+      await reservaPage.completarPago({
+        numero: '5555 5555 5555 4444',
+        titular: 'Edwin Martinez',
+        expiracion: '12/30',
+        cvv: '123'
+      });
+      await reservaPage.confirmarPago();
+      await driver.wait(async () => {
+        const mensaje = await driver.findElement(By.id('checkout-error')).getText();
+        return mensaje.toLowerCase().includes('fondos') || mensaje.toLowerCase().includes('insuf');
+      }, 10000, 'No se validó fondos insuficientes.');
+    });
+
+    await ejecutarCaso('11_login_timeout', async () => {
+      await loginPage.cerrarSesion();
+      await loginPage.abrir();
+      await loginPage.ingresarCredenciales(`invalid-${Date.now()}@domain.com`, 'pass');
+      await loginPage.hacerLogin();
+      const mensaje = await driver.wait(async () => {
+        const texto = await loginPage.obtenerMensajeError();
+        return texto || false;
+      }, 10000, 'No se gestionó respuesta fallida.');
+      if (!mensaje.trim()) {
+        throw new Error('El intento fallido no mostró un mensaje de error.');
+      }
+    });
+
+    await ejecutarCaso('12_sin_asientos_seleccionados', async () => {
+      await loginPage.ingresarCredenciales('edwin@gmail.com', 'edwin1234567');
+      await loginPage.hacerLogin();
+      await carteleraPage.seleccionarPrimeraPelicula();
+      await driver.findElement(By.id('continue-to-payment')).click();
+      await driver.wait(async () => {
+        const mensaje = await driver.findElement(By.id('seat-selection-error')).getText();
+        return mensaje.toLowerCase().includes('seleccionar') || mensaje.toLowerCase().includes('asiento');
+      }, 10000, 'Se esperaba validación de asiento.');
+    });
+
+    await ejecutarCaso('13_navegacion_atras_dentro_login', async () => {
+      await loginPage.cerrarSesion();
+      await driver.navigate().back();
+      await driver.wait(async () => {
+        const loginVisible = await driver.findElement(By.id('login-view')).getAttribute('class');
+        return !loginVisible.includes('hidden');
+      }, 5000, 'No se bloqueó el acceso con historial.');
+    });
+
+    await ejecutarCaso('14_navegacion_insegura_sin_token', async () => {
+      await driver.get('http://localhost:3000');
+      await driver.wait(until.elementLocated(By.id('login-view')), 5000);
+      const urlActual = await driver.getCurrentUrl();
+      if (urlActual.includes('catalog')) throw new Error('Se permitió navegación insegura.');
+    });
+
+    await ejecutarCaso('15_cierre_sesion_desde_catalogo', async () => {
+      await loginPage.ingresarCredenciales('edwin@gmail.com', 'edwin1234567');
+      await loginPage.hacerLogin();
+      await driver.wait(
+        until.elementIsVisible(driver.findElement(By.id('catalog-view'))),
+        10000,
+        'La cartelera no apareció después del login.'
+      );
+      await driver.findElement(By.id('logout-button')).click();
+      await driver.wait(until.elementLocated(By.id('login-view')), 10000);
+    });
+  } finally {
+    await driver.quit();
+  }
+}
+
+(async () => {
+  try {
+    await ejecutarSuite();
+    console.log('\nSuite Selenium completada con 15 casos ejecutados.');
+  } catch (error) {
+    console.error('\nFallo en la suite UI:', error);
+    process.exitCode = 1;
+  }
+})();
+</file>
+
+<file path=".env.example">
+PORT=3000
+JWT_SECRET=cambia-esta-clave-local-por-una-de-al-menos-32-caracteres
+JWT_DURACION_SEGUNDOS=3600
+LIMITE_CUERPO_BYTES=10240
+MORGAN_FORMAT=dev
+FRONTEND_PATH=../frontend
+</file>
+
+<file path="README.md">
+# CineFlex
+
+![Build](https://img.shields.io/badge/Build-GitHub_Actions-blue?logo=githubactions)
+![Version](https://img.shields.io/badge/Version-0.1.0-informational)
+![Node.js](https://img.shields.io/badge/Node.js-20-green?logo=nodedotjs)
+
+CineFlex es una aplicación de demostración para el flujo de reserva de cine. Contiene una interfaz web para iniciar sesión, consultar la cartelera, seleccionar asientos, procesar un pago simulado y consultar la confirmación de la reserva. El backend expone una API REST con Express y TypeScript, emplea datos en memoria y una pasarela de pagos simulada, y dispone de artefactos de pruebas de API, interfaz y rendimiento.
+
+**Repositorio Git:** <https://github.com/Zexter27/cine-flex.git>
+
+## 1. Contexto y Arquitectura de Componentes
+
+La aplicación integra una interfaz estática servida por el backend, una API HTTP y datos simulados. Express publica los archivos de `frontend/`, registra las solicitudes y aplica las rutas, la validación de datos y el manejo de errores. La información de películas, funciones, salas, asientos y el usuario de demostración reside en los mocks del backend; no se configura una base de datos en los archivos incluidos en este proyecto.
+
+### Componentes y estructura de directorios
+
+```mermaid
+flowchart TD
+    ROOT["cine-flex/"]
+    ROOT --> BACK["backend/"]
+    BACK --> SRC["src/"]
+    SRC --> COMUN["comun/\nRespuesta HTTP y errores"]
+    SRC --> CONF["configuracion/\nVariables de entorno"]
+    SRC --> CTRL["controladores/"]
+    SRC --> DTO["dto/\nValidación de solicitudes"]
+    SRC --> MID["middlewares/\nAutenticación y errores"]
+    SRC --> MOCK["mocks/\nDatos y pasarela de pagos"]
+    SRC --> ROUTES["rutas/"]
+    SRC --> SERVICES["servicios/"]
+    BACK --> APP["app.ts y servidor.ts"]
+    ROOT --> FRONT["frontend/\nindex.html, app.js, styles.css"]
+    ROOT --> API["api_tests/\nColección y entorno Postman/Newman"]
+    ROOT --> UI["ui_tests/\ntest_suite.js y pages/"]
+    UI --> POM["LoginPage.js, CarteleraPage.js, ReservaPage.js"]
+    ROOT --> PERF["performance/cine-flex.jmx"]
+    ROOT --> CI[".github/workflows/qa-pipeline.yml"]
+```
+
+### Flujo funcional
+
+1. El navegador carga la interfaz desde `http://localhost:3000/`.
+2. `POST /login` valida las credenciales de demostración y devuelve un token JWT.
+3. `GET /cartelera` requiere un token Bearer válido. `GET /asientos/disponibles` publica el listado de asientos disponibles.
+4. `POST /reserva` y `POST /pagos/mock` validan los datos recibidos y delegan el procesamiento en la pasarela de pagos simulada.
+5. La interfaz muestra los resultados del flujo de reserva y las pruebas automatizadas verifican contratos HTTP, interacciones de usuario y carga.
+
+### Rutas HTTP disponibles
+
+| Método | Ruta | Acceso | Propósito documentado |
+|---|---|---|---|
+| `GET` | `/health` | Público | Devuelve el estado de disponibilidad del servicio. |
+| `POST` | `/login` | Público | Valida el inicio de sesión y genera el token JWT. |
+| `GET` | `/cartelera` | Requiere Bearer JWT | Consulta la cartelera de películas simulada. |
+| `GET` | `/asientos/disponibles` | Público | Consulta asientos disponibles; acepta el parámetro opcional `funcionId`. |
+| `POST` | `/reserva` | Requiere Bearer JWT | Valida y procesa una reserva mediante la pasarela de pagos simulada. |
+| `POST` | `/pagos/mock` | Requiere Bearer JWT | Ejecuta el mismo controlador de procesamiento simulado que la ruta de reserva. |
+
+## 2. Requisitos Previos (Prerequisites)
+
+| Herramienta | Versión declarada | Uso |
+|---|---|---|
+| Node.js | `20` en GitHub Actions. El README anterior del repositorio indicaba `18` o superior para desarrollo local. | Ejecutar el backend y las suites JavaScript. |
+| npm | `9` o superior en el README anterior del repositorio; la versión exacta no está fijada en los manifiestos incluidos. | Instalar dependencias y ejecutar scripts. |
+| TypeScript | `^5.8.3` en `backend/package.json`. | Comprobación de tipos del backend. |
+| Google Chrome | Requerido por la suite Selenium; no se fija una versión del navegador en los archivos incluidos. | Navegador automatizado en modo headless. |
+| ChromeDriver | `^140.0.0` en `ui_tests/package.json`. | Control del navegador Chrome. |
+| Selenium WebDriver | `^4.35.0` en `ui_tests/package.json`. | Automatización de la interfaz y ejecución del patrón Page Object Model. |
+| Newman | `^6.2.1` en `api_tests/package.json`. | Ejecución de la colección Postman por línea de comandos. |
+| Apache JMeter | `5.6.3` en `performance/cine-flex.jmx`. | Ejecución del plan de carga y estrés. El README anterior del repositorio indicaba `5.5` o superior. |
+| Java Runtime Environment | `8` | Entorno de ejecución de JMeter. |
+| Git | Requerido para clonar el repositorio. | Control de versiones y descarga del código. |
+
+## 3. Configuración Rápida y Ejecución (Local Setup)
+
+### Clonar el repositorio
+
+```bash
+git clone https://github.com/Zexter27/cine-flex.git
+cd cine-flex
+```
+
+### Configurar el entorno
+
+Cree el archivo `.env` en la raíz a partir del archivo de ejemplo:
+
+```bash
+cp .env.example .env
+```
+
+El backend busca la configuración en `.env` dentro de su directorio de ejecución y, como alternativa, en el directorio raíz del repositorio. El archivo de ejemplo contiene las variables documentadas en la sección 4.
+
+### Instalar dependencias e iniciar el backend
+
+Desde la raíz del repositorio, ejecute:
+
+```bash
+cd backend
+npm ci
+npm run comprobar
+npm start
+```
+
+El comando `npm run comprobar` ejecuta `tsc --noEmit` para verificar los tipos de TypeScript. `npm start` inicia el servidor HTTP según el puerto definido en `PORT`.
+
+### Acceder a la aplicación
+
+Abra <http://localhost:3000/> en el navegador. El backend sirve directamente los archivos estáticos de `frontend/`; el proyecto no requiere un comando de servidor independiente para esa carpeta.
+
+Las credenciales de demostración utilizadas por los mocks y por las pruebas son:
+
+| Campo | Valor |
+|---|---|
+| Correo | `edwin@gmail.com` |
+| Contraseña | `edwin1234567` |
+
+## 4. Gestión de Configuración (Environment Variables)
+
+Copie `.env.example` a `.env` y conserve los nombres de variables definidos por el backend.
+
+```dotenv
+PORT=3000
+JWT_SECRET=cambia-esta-clave-local-por-una-de-al-menos-32-caracteres
+JWT_DURACION_SEGUNDOS=3600
+LIMITE_CUERPO_BYTES=10240
+MORGAN_FORMAT=dev
+FRONTEND_PATH=../frontend
+```
+
+| Variable | Tipo | Descripción | Valor por Defecto |
+|---|---|---|---|
+| `PORT` | Entero | Puerto HTTP del servidor. El backend valida que se encuentre entre `1` y `65535`. | `3000` |
+| `JWT_SECRET` | Cadena | Secreto utilizado para firmar y verificar los tokens JWT. El backend exige al menos 32 caracteres. | `cambia-esta-clave-local-por-una-de-al-menos-32-caracteres` |
+| `JWT_DURACION_SEGUNDOS` | Entero | Duración de los tokens JWT expresada en segundos. Debe ser mayor que cero. | `3600` |
+| `LIMITE_CUERPO_BYTES` | Entero | Tamaño máximo del cuerpo JSON de una solicitud, en bytes. Debe ser mayor que cero. | `10240` |
+| `MORGAN_FORMAT` | Cadena | Valor de configuración declarado para el registro de solicitudes con Morgan. | `dev` |
+| `FRONTEND_PATH` | Ruta relativa | Ruta de la interfaz web respecto del directorio raíz de `backend`. | `../frontend` |
+
+El módulo de configuración requiere los valores definidos, valida los valores numéricos y rechaza el inicio si falta una variable obligatoria o si `JWT_SECRET` tiene menos de 32 caracteres.
+
+## 5. Módulo de Pruebas de API (Postman / Newman)
+
+La colección se encuentra en `api_tests/CineFlex_API_Collection.json` y el entorno local en `api_tests/CineFlex_Environment.json`. El entorno define `baseUrl`, `correoDemo`, `contrasenaDemo` y `token`; la solicitud de inicio de sesión guarda el JWT para las solicitudes posteriores.
+
+### Ejecutar la colección desde la raíz
+
+Con el backend en ejecución, use Newman sin instalación global:
+
+```bash
+npx --yes newman run api_tests/CineFlex_API_Collection.json -e api_tests/CineFlex_Environment.json
+```
+
+Para generar un reporte JUnit como el publicado por CI:
+
+```bash
+mkdir -p reportes
+npx --yes newman run api_tests/CineFlex_API_Collection.json \
+  -e api_tests/CineFlex_Environment.json \
+  --reporters cli,junit \
+  --reporter-junit-export reportes/newman.xml
+```
+
+También está declarado el script `test` dentro de `api_tests/package.json`. Para ejecutarlo desde esa carpeta, instale sus dependencias y ejecute `npm test`:
+
+```bash
+cd api_tests
+npm install
+npm test
+```
+
+### Cobertura de la colección existente
+
+La colección incluye diez solicitudes con aserciones sobre el contrato HTTP y la estructura de las respuestas:
+
+| N.º | Caso | Verificaciones principales |
+|---:|---|---|
+| 1 | Health check | HTTP `200`, `exito = true`, mensaje no vacío y `datos.estado = disponible`. |
+| 2 | Login exitoso | HTTP `200`, identificador y correo del usuario, JWT de tres partes y almacenamiento del token en el entorno. |
+| 3 | Cartelera sin token | HTTP `401`, respuesta no exitosa y `datos = null`. |
+| 4 | Cartelera con token | HTTP `200`, lista no vacía, estructura básica de películas y tiempo de respuesta inferior a `300 ms`. |
+| 5 | Asientos disponibles | HTTP `200`, lista no vacía, identificador de asiento y campo `disponible` booleano. Consulta `funcionId=5`. |
+| 6 | Reserva sin token | HTTP `401` y respuesta no exitosa. |
+| 7 | Reserva aprobada | HTTP `200`, estado `aprobado`, código `approved`, identificador de transacción, monto y moneda `COP`. |
+| 8 | Reserva con correo distinto | HTTP `403` y mensaje de posible actividad sospechosa. |
+| 9 | Tarjeta vencida | HTTP `402` y mensaje de tarjeta vencida. |
+| 10 | Número de tarjeta no numérico | HTTP `400` y mensaje de validación de la información enviada. |
+
+La colección usa `http://localhost:3000` como URL base. Los escenarios de pago usan la pasarela simulada del backend.
+
+## 6. Módulo de Pruebas de Interfaz de Usuario (Selenium + POM)
+
+La suite se encuentra en `ui_tests/test_suite.js` y sigue el patrón Page Object Model (POM): las clases de `ui_tests/pages/` encapsulan localizadores y acciones de las vistas.
+
+### Ejecutar la suite
+
+Mantenga el backend activo y ejecute desde la raíz:
+
+```bash
+cd ui_tests
+npm install
+npm test
+```
+
+La suite construye Chrome con `--headless=new`, `--no-sandbox`, `--disable-dev-shm-usage` y un tamaño de ventana de `1440x1200`. Al terminar, cierra el controlador del navegador. La ejecución imprime los nombres de los casos y finaliza con el mensaje de suite completada si no se produce un error.
+
+### Page Objects
+
+| Archivo | Responsabilidad |
+|---|---|
+| `pages/LoginPage.js` | Abrir la aplicación, ingresar credenciales, iniciar sesión, leer errores y cerrar sesión. |
+| `pages/CarteleraPage.js` | Consultar la vista de cartelera, seleccionar una película, contar tarjetas y navegar atrás. |
+| `pages/ReservaPage.js` | Seleccionar un asiento, avanzar al pago, completar datos, confirmar pago y consultar la confirmación. |
+
+### Casos de prueba automatizados
+
+| N.º | Caso | Flujo comprobado |
+|---:|---|---|
+| 1 | `01_bloqueo_preventivo` | Verifica el mensaje de bloqueo tras tres intentos de inicio de sesión fallidos. |
+| 2 | `02_login_exitoso` | Inicia sesión con credenciales de demostración y comprueba la visibilidad de la cartelera. |
+| 3 | `03_seleccion_pelicula` | Selecciona una película y espera la vista de asientos. |
+| 4 | `04_compra_end_to_end` | Selecciona asiento, completa el pago simulado y espera la confirmación. |
+| 5 | `05_cierre_sesion_y_historial` | Cierra sesión y comprueba que el historial no vuelva a mostrar una vista autenticada. |
+| 6 | `06_login_nuevo_exitoso` | Realiza un nuevo inicio de sesión. |
+| 7 | `07_persistencia_ocupacion_real` | Recorre la selección de asiento, navegación, cierre de sesión y nuevo inicio de sesión. |
+| 8 | `08_tarjeta_vencida` | Comprueba la respuesta ante una tarjeta vencida. |
+| 9 | `09_cvv_invalido` | Comprueba la validación de CVV. |
+| 10 | `10_fondos_insuficientes` | Comprueba la respuesta de fondos insuficientes de la pasarela simulada. |
+| 11 | `11_login_timeout` | Comprueba que un inicio de sesión fallido muestre un mensaje de error. |
+| 12 | `12_sin_asientos_seleccionados` | Comprueba la validación al continuar sin seleccionar asientos. |
+| 13 | `13_navegacion_atras_dentro_login` | Comprueba que la navegación hacia atrás mantenga la vista de inicio de sesión después del cierre de sesión. |
+| 14 | `14_navegacion_insegura_sin_token` | Comprueba la vista inicial cuando se abre la aplicación sin token. |
+| 15 | `15_cierre_sesion_desde_catalogo` | Cierra sesión desde la cartelera y espera la vista de inicio de sesión. |
+
+## 7. Módulo de Rendimiento (JMeter)
+
+El plan de carga está definido en `performance/cine-flex.jmx`. Los parámetros siguientes proceden del plan JMeter incluido en el repositorio.
+
+| Parámetro | Configuración |
+|---|---|
+| Versión de JMeter del plan | `5.6.3` |
+| Protocolo y host | `http://localhost:3000` |
+| Usuarios virtuales (threads) | `500` |
+| Ramp-up | `15` segundos |
+| Iteraciones por grupo | `1` |
+| Comportamiento al fallar una solicitud | Continuar (`continue`). |
+| Recolector de resultados | `View Results Tree`. |
+| Extracción del token | JSONPath `$.datos.token`, guardado en la variable `mi_jwt`. |
+| Cabeceras de solicitud | `Authorization: Bearer ${mi_jwt}` y `Content-Type: application/json`. |
+
+### Secuencia y endpoints evaluados
+
+1. `POST /login`: envía las credenciales de demostración y extrae el JWT de la respuesta.
+2. `GET /cartelera`: solicita la cartelera con la cabecera de autorización.
+3. `GET /asientos/disponibles`: consulta la disponibilidad de asientos.
+4. `POST /reserva`: envía un cuerpo JSON con los datos de tarjeta de prueba, monto, moneda, correo, identificador de función y asiento generado por el plan.
+
+### Ejecución
+
+Para abrir el plan en la interfaz gráfica de JMeter:
+
+```bash
+jmeter -t performance/cine-flex.jmx
+```
+
+Para ejecutar en modo no gráfico y guardar las muestras en un archivo JTL:
+
+```bash
+jmeter -n -t performance/cine-flex.jmx -l performance/cine-flex.jtl
+```
+
+El plan contiene configuración de solicitudes y recopilación de muestras; el XML de origen no incluye resultados ejecutados de rendimiento.
+
+## 8. Integración Continua (CI/CD)
+
+El workflow `.github/workflows/qa-pipeline.yml`, con nombre `QA Pipeline`, utiliza GitHub Actions y define un job de backend y pruebas de API.
+
+### Eventos que disparan el workflow
+
+- `push` a la rama `main`.
+- `pull_request` dirigido a la rama `main`.
+- `workflow_dispatch`, para ejecución manual.
+
+### Flujo automatizado
+
+1. Descarga el repositorio mediante `actions/checkout@v4`.
+2. Configura Node.js `20` mediante `actions/setup-node@v4`.
+3. Crea `.env` desde `.env.example` y reemplaza `JWT_SECRET` por una clave aleatoria efímera generada durante la ejecución.
+4. Instala las dependencias del backend con `npm ci`.
+5. Ejecuta `npm run comprobar` para validar TypeScript.
+6. Inicia el backend y espera hasta 60 segundos a que responda `GET /health` en `http://localhost:3000/health`.
+7. Ejecuta pruebas de humo HTTP para disponibilidad, login inválido, bloqueo tras tres intentos, login válido, cartelera con y sin token, asientos disponibles, reserva sin token y ruta inexistente.
+8. Ejecuta la colección Postman con Newman y genera el reporte JUnit en `reportes/newman.xml`.
+9. Publica el reporte Newman como artefacto aunque el job falle y publica `backend.log` cuando ocurre un fallo.
+
+El job se ejecuta en `ubuntu-latest`, tiene un límite de 10 minutos, restringe los permisos a `contents: read` y cancela una ejecución anterior del mismo grupo cuando corresponde. El workflow definido automatiza la comprobación de tipos y las pruebas HTTP/API; no contiene pasos de ejecución de Selenium ni de JMeter.
+
+## 9. Entregables y Actividades del Equipo
+
+### Entregables presentes en el repositorio
+
+- **Aplicación:** backend Express/TypeScript (`backend/`) e interfaz web estática (`frontend/`).
+- **Pruebas de API:** colección Postman `api_tests/CineFlex_API_Collection.json` y entorno `api_tests/CineFlex_Environment.json`, con diez solicitudes automatizadas.
+- **Pruebas de interfaz:** suite `ui_tests/test_suite.js` con 15 casos y tres Page Objects.
+- **Pruebas de rendimiento:** plan JMeter `performance/cine-flex.jmx`.
+- **Integración continua:** workflow `.github/workflows/qa-pipeline.yml` para la comprobación TypeScript y las pruebas HTTP/API.
+</file>
+
+<file path="backend/package.json">
+{
+  "name": "cineflex-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API REST de CineFlex con Express, TypeScript y TypeORM",
+  "main": "src/servidor.ts",
+  "scripts": {
+    "start": "tsx src/servidor.ts",
+    "dev": "tsx watch src/servidor.ts",
+    "comprobar": "tsc --noEmit"
+  },
+  "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.25",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.14.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}
+</file>
+
+<file path="frontend/app.js">
+const API_BASE_URL = 'http://localhost:3000';
+
+const estado = {
+  token: sessionStorage.getItem('cineflex-token') || '',
+  peliculaSeleccionada: null,
+  asientosSeleccionados: [],
+  valorReserva: 0,
+  historialVistas: []
+};
+
+const vistas = {
+  login: document.querySelector('#login-view'),
+  catalogo: document.querySelector('#catalog-view'),
+  asientos: document.querySelector('#seat-view'),
+  checkout: document.querySelector('#checkout-view'),
+  confirmacion: document.querySelector('#confirmation-view')
+};
+
+const elementos = {
+  loginForm: document.querySelector('#login-form'),
+  loginError: document.querySelector('#login-error'),
+  logoutButton: document.querySelector('#logout-button'),
+  backButton: document.querySelector('#back-button'),
+  movieGrid: document.querySelector('#movie-grid'),
+  seatGrid: document.querySelector('#seat-grid'),
+  selectedSeatsText: document.querySelector('#selected-seats-text'),
+  seatSelectionError: document.querySelector('#seat-selection-error'),
+  seatMovieTitle: document.querySelector('#seat-movie-title'),
+  continueToPayment: document.querySelector('#continue-to-payment'),
+  backToCatalogButton: document.querySelector('#back-to-catalog-button'),
+  backToSeatButton: document.querySelector('#back-to-seat-button'),
+  checkoutForm: document.querySelector('#checkout-form'),
+  checkoutError: document.querySelector('#checkout-error'),
+  checkoutAmount: document.querySelector('#checkout-amount'),
+  checkoutMovieName: document.querySelector('#checkout-movie-name'),
+  checkoutSeatList: document.querySelector('#checkout-seat-list'),
+  checkoutTotal: document.querySelector('#checkout-total'),
+  confirmationDetail: document.querySelector('#confirmation-detail'),
+  newBookingButton: document.querySelector('#new-booking-button')
+};
+
+function obtenerTipoTarjeta(numero) {
+  const limpio = numero.replace(/\s+/g, '').replace(/-/g, '');
+  if (/^4/.test(limpio)) return 'visa';
+  if (/^5[1-5]/.test(limpio)) return 'mastercard';
+  if (/^3[47]/.test(limpio)) return 'amex';
+  return 'visa';
+}
+
+function cabecerasAutorizadas() {
+  return {
+    'Content-Type': 'application/json',
+    ...(estado.token ? { Authorization: `Bearer ${estado.token}` } : {})
+  };
+}
+
+function actualizarBotonesNavegacion(vistaActual) {
+  const mostrarLogout = vistaActual !== 'login';
+  const mostrarVolver = ['asientos', 'checkout', 'confirmacion'].includes(vistaActual);
+
+  elementos.logoutButton.classList.toggle('hidden', !mostrarLogout);
+  elementos.backButton.classList.toggle('hidden', !mostrarVolver);
+}
+
+function mostrarVista(nombreVista, { registrar = true, reemplazarUltima = false } = {}) {
+  Object.entries(vistas).forEach(([clave, vista]) => {
+    vista.classList.toggle('hidden', clave !== nombreVista);
+  });
+
+  if (registrar) {
+    const ultimaVista = estado.historialVistas[estado.historialVistas.length - 1];
+    if (reemplazarUltima && estado.historialVistas.length) {
+      estado.historialVistas[estado.historialVistas.length - 1] = nombreVista;
+      window.history.replaceState({ view: nombreVista }, '', `#${nombreVista}`);
+    } else if (ultimaVista !== nombreVista) {
+      estado.historialVistas.push(nombreVista);
+      window.history.pushState({ view: nombreVista }, '', `#${nombreVista}`);
+    }
+  }
+
+  actualizarBotonesNavegacion(nombreVista);
+}
+
+function retrocederVista() {
+  if (estado.historialVistas.length <= 1) {
+    return;
+  }
+
+  estado.historialVistas.pop();
+  const vistaAnterior = estado.historialVistas[estado.historialVistas.length - 1];
+
+  if (vistaAnterior === 'catalogo') {
+    mostrarVista('catalogo', { registrar: false, reemplazarUltima: true });
+    return;
+  }
+
+  if (vistaAnterior === 'asientos') {
+    mostrarVista('asientos', { registrar: false, reemplazarUltima: true });
+    return;
+  }
+
+  if (vistaAnterior === 'checkout') {
+    mostrarVista('checkout', { registrar: false, reemplazarUltima: true });
+    return;
+  }
+
+  mostrarVista('catalogo', { registrar: false, reemplazarUltima: true });
+}
+
+window.addEventListener('popstate', (evento) => {
+  if (!estado.token) {
+    mostrarVista('login', { registrar: false, reemplazarUltima: true });
+    return;
+  }
+
+  const vistaSolicitada = evento.state?.view || 'catalogo';
+  if (vistaSolicitada === 'login') {
+    return;
+  }
+
+  if (['catalogo', 'asientos', 'checkout', 'confirmacion'].includes(vistaSolicitada)) {
+    mostrarVista(vistaSolicitada, { registrar: false, reemplazarUltima: true });
+  }
+});
+
+async function cargarCartelera() {
+  try {
+    const respuesta = await fetch(`${API_BASE_URL}/cartelera`, {
+      headers: cabecerasAutorizadas()
+    });
+
+    if (!respuesta.ok) {
+      throw new Error('No se pudo cargar la cartelera.');
+    }
+
+    const resultado = await respuesta.json();
+    const peliculas = resultado.datos || [];
+
+    elementos.movieGrid.innerHTML = peliculas.map((pelicula, indice) => {
+      const precio = 18000 + indice * 4500;
+      return `
+        <button type="button" class="movie-card" data-testid="movie-card-${pelicula.id || indice + 1}" data-movie-id="${pelicula.id || indice + 1}" data-movie-title="${pelicula.titulo}" data-movie-price="${precio}">
+          <div class="movie-poster" aria-hidden="true">🎬</div>
+          <div>
+            <h3>${pelicula.titulo}</h3>
+          </div>
+          <div class="movie-meta">
+            <span>${pelicula.hora || '18:30 hrs'}</span>
+            <strong>$${precio.toLocaleString('es-CO')}</strong>
+          </div>
+        </button>
+      `;
+    }).join('');
+
+    elementos.movieGrid.querySelectorAll('[data-testid^="movie-card-"]').forEach((boton) => {
+      boton.addEventListener('click', async () => {
+        const { movieId, movieTitle, moviePrice } = boton.dataset;
+        estado.peliculaSeleccionada = {
+          id: Number(movieId),
+          titulo: movieTitle,
+          precio: Number(moviePrice)
+        };
+
+        elementos.movieGrid.querySelectorAll('[data-testid^="movie-card-"]').forEach((tarjeta) => {
+          tarjeta.classList.toggle('selected', tarjeta === boton);
+        });
+
+        await renderizarAsientos();
+        mostrarVista('asientos');
+      });
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function renderizarAsientos() {
+  try {
+    const funcionId = estado.peliculaSeleccionada?.id ?? 1;
+    const respuesta = await fetch(`${API_BASE_URL}/asientos/disponibles?funcionId=${funcionId}`);
+    if (!respuesta.ok) {
+      throw new Error('No se pudo consultar la disponibilidad de asientos.');
+    }
+
+    const resultado = await respuesta.json();
+    const disponibles = new Set((resultado.datos || []).filter((asiento) => asiento.disponible).map((asiento) => asiento.id));
+
+    const filas = ['A', 'B', 'C', 'D', 'E'];
+    const columnas = [1, 2, 3, 4, 5, 6, 7, 8];
+
+    const html = filas.flatMap((fila) =>
+      columnas.map((numero) => {
+        const asientoId = `${fila}${numero}`;
+        const disponible = disponibles.has(asientoId);
+        const ocupado = !disponible;
+
+        return `
+          <button
+            type="button"
+            class="seat-button ${ocupado ? 'occupied' : ''}"
+            data-testid="seat-${asientoId}"
+            data-seat-id="${asientoId}"
+            aria-label="Asiento ${asientoId}"
+            ${ocupado ? 'disabled' : ''}
+          >
+            ${asientoId}
+          </button>
+        `;
+      })
+    ).join('');
+
+    elementos.seatGrid.innerHTML = html;
+    elementos.seatMovieTitle.textContent = estado.peliculaSeleccionada
+      ? `Elige tus asientos para ${estado.peliculaSeleccionada.titulo}`
+      : 'Elige tus asientos';
+
+    elementos.seatGrid.querySelectorAll('.seat-button:not(.occupied)').forEach((boton) => {
+      boton.addEventListener('click', () => {
+        const seatId = boton.dataset.seatId;
+        const index = estado.asientosSeleccionados.indexOf(seatId);
+
+        if (index >= 0) {
+          estado.asientosSeleccionados.splice(index, 1);
+        } else if (estado.asientosSeleccionados.length < 6) {
+          estado.asientosSeleccionados.push(seatId);
+        }
+
+        elementos.seatSelectionError.classList.add('hidden');
+        boton.classList.toggle('selected', index < 0 && estado.asientosSeleccionados.includes(seatId));
+        actualizarResumenAsientos();
+      });
+    });
+
+    actualizarResumenAsientos();
+  } catch (error) {
+    console.error('Error al renderizar asientos:', error);
+  }
+}
+
+function actualizarResumenAsientos() {
+  elementos.selectedSeatsText.textContent = estado.asientosSeleccionados.length > 0
+    ? estado.asientosSeleccionados.join(', ')
+    : 'Ninguno';
+
+  if (estado.peliculaSeleccionada) {
+    const valor = estado.peliculaSeleccionada.precio * Math.max(estado.asientosSeleccionados.length, 0);
+    estado.valorReserva = valor;
+  }
+}
+
+async function enviarLogin(evento) {
+  evento.preventDefault();
+  elementos.loginError.classList.add('hidden');
+
+  const correo = document.querySelector('#login-email').value.trim();
+  const contrasena = document.querySelector('#login-password').value.trim();
+
+  try {
+    const respuesta = await fetch(`${API_BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ correoElectronico: correo, contrasena })
+    });
+
+    const resultado = await respuesta.json();
+    if (!respuesta.ok) {
+      throw new Error(resultado.mensaje || 'No se pudo iniciar sesión.');
+    }
+
+    estado.token = resultado.datos.token;
+    sessionStorage.setItem('cineflex-token', estado.token);
+    mostrarVista('catalogo');
+    await cargarCartelera();
+  } catch (error) {
+    elementos.loginError.textContent = error.message;
+    elementos.loginError.classList.remove('hidden');
+  }
+}
+
+function limpiarReserva() {
+  estado.peliculaSeleccionada = null;
+  estado.asientosSeleccionados = [];
+  estado.valorReserva = 0;
+  elementos.checkoutAmount.value = '$0';
+  document.querySelector('#checkout-card-number').value = '4242 4242 4242 4242';
+  document.querySelector('#checkout-card-holder').value = 'Edwin Martinez';
+  document.querySelector('#checkout-expiry').value = '12/30';
+  document.querySelector('#checkout-cvv').value = '123';
+  elementos.checkoutError.classList.add('hidden');
+  elementos.checkoutMovieName.textContent = '—';
+  elementos.checkoutSeatList.textContent = '—';
+  elementos.checkoutTotal.textContent = '$0';
+}
+
+function prepararCheckout() {
+  if (!estado.peliculaSeleccionada || estado.asientosSeleccionados.length === 0) {
+    elementos.seatSelectionError.textContent = 'Debes seleccionar una película y al menos un asiento.';
+    elementos.seatSelectionError.classList.remove('hidden');
+    return;
+  }
+
+  elementos.seatSelectionError.classList.add('hidden');
+  estado.valorReserva = estado.peliculaSeleccionada.precio * estado.asientosSeleccionados.length;
+  elementos.checkoutMovieName.textContent = estado.peliculaSeleccionada.titulo;
+  elementos.checkoutSeatList.textContent = estado.asientosSeleccionados.join(', ');
+  elementos.checkoutTotal.textContent = `$${estado.valorReserva.toLocaleString('es-CO')}`;
+  elementos.checkoutAmount.value = `$${estado.valorReserva.toLocaleString('es-CO')}`;
+  elementos.checkoutError.classList.add('hidden');
+
+  mostrarVista('checkout');
+}
+
+async function confirmarPago(evento) {
+  evento.preventDefault();
+  elementos.checkoutError.classList.add('hidden');
+
+  if (!estado.peliculaSeleccionada || estado.asientosSeleccionados.length === 0) {
+    return;
+  }
+
+  const numTarjeta = document.querySelector('#checkout-card-number').value.trim().replace(/[\s-]/g, '');
+  const nombreTitular = document.querySelector('#checkout-card-holder').value.trim();
+  const expiracion = document.querySelector('#checkout-expiry').value.trim();
+  const cvv = document.querySelector('#checkout-cvv').value.trim();
+
+  const [mes, anio] = expiracion.split('/');
+  const payload = {
+    cardNumber: numTarjeta,
+    cardHolder: nombreTitular,
+    expiryMonth: mes,
+    expiryYear: anio || '30',
+    cvv,
+    amount: estado.valorReserva,
+    currency: 'COP',
+    cardType: obtenerTipoTarjeta(numTarjeta),
+    email: 'edwin@gmail.com',
+    funcionId: estado.peliculaSeleccionada?.id ?? null,
+    asientos: estado.asientosSeleccionados
+  };
+
+  try {
+    const respuesta = await fetch(`${API_BASE_URL}/reserva`, {
+      method: 'POST',
+      headers: cabecerasAutorizadas(),
+      body: JSON.stringify(payload)
+    });
+
+    const resultado = await respuesta.json();
+    if (!respuesta.ok) {
+      throw new Error(resultado.mensaje || 'La transacción fue rechazada.');
+    }
+
+    const reserva = resultado.datos || {};
+    elementos.confirmationDetail.innerHTML = `
+      <div><strong>Película:</strong> ${estado.peliculaSeleccionada.titulo}</div>
+      <div><strong>Asientos:</strong> ${estado.asientosSeleccionados.join(', ')}</div>
+      <div><strong>Total:</strong> $${estado.valorReserva.toLocaleString('es-CO')}</div>
+      <div><strong>Transacción:</strong> ${reserva.idTransaccion || 'CF-000000'}</div>
+      <div><strong>Estado:</strong> ${reserva.estado || 'aprobado'}</div>
+    `;
+
+    mostrarVista('confirmacion');
+  } catch (error) {
+    elementos.checkoutError.textContent = error.message;
+    elementos.checkoutError.classList.remove('hidden');
+  }
+}
+
+function manejarCierreSesion() {
+  sessionStorage.removeItem('cineflex-token');
+  estado.token = '';
+  estado.peliculaSeleccionada = null;
+  estado.asientosSeleccionados = [];
+  limpiarReserva();
+  estado.historialVistas = ['login'];
+  mostrarVista('login', { registrar: false, reemplazarUltima: true });
+}
+
+function inicializarVista() {
+  if (estado.token) {
+    estado.historialVistas = ['catalogo'];
+    mostrarVista('catalogo', { registrar: false, reemplazarUltima: true });
+    cargarCartelera();
+  } else {
+    estado.historialVistas = ['login'];
+    mostrarVista('login', { registrar: false, reemplazarUltima: true });
+  }
+}
+
+elementos.loginForm.addEventListener('submit', enviarLogin);
+elementos.logoutButton.addEventListener('click', manejarCierreSesion);
+elementos.backButton.addEventListener('click', retrocederVista);
+elementos.backToCatalogButton.addEventListener('click', () => {
+  mostrarVista('catalogo', { registrar: true });
+});
+elementos.backToSeatButton.addEventListener('click', () => {
+  mostrarVista('asientos', { registrar: true });
+});
+elementos.continueToPayment.addEventListener('click', prepararCheckout);
+elementos.checkoutForm.addEventListener('submit', confirmarPago);
+elementos.newBookingButton.addEventListener('click', () => {
+  limpiarReserva();
+  mostrarVista('catalogo');
+  cargarCartelera();
+});
+
+inicializarVista();
+</file>
+
+<file path="frontend/index.html">
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CineFlex | Reserva inteligente</title>
+    <meta
+      name="description"
+      content="Frontend institucional minimalista para login, cartelera, asientos y pago de CineFlex"
+    >
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-block" data-testid="app-brand">
+          <p class="eyebrow">CineFlex</p>
+          <h1>Reserva de cine y pagos</h1>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="back-button" class="ghost-button hidden" type="button" data-testid="back-button">
+            Volver
+          </button>
+          <button id="logout-button" class="secondary-button hidden" type="button" data-testid="logout-button">
+            Cerrar sesión
+          </button>
+        </div>
+      </header>
+
+      <main class="main-layout">
+        <section id="login-view" class="view" data-testid="login-view" aria-label="Vista de inicio de sesión">
+          <div class="panel auth-panel">
+            <div class="panel-header text-center">
+              <p class="eyebrow">Acceso</p>
+              <h2>Iniciar sesión</h2>
+            </div>
+
+            <form id="login-form" data-testid="login-form" novalidate>
+              <div>
+                <label for="login-email">Correo electrónico</label>
+                <input
+                  id="login-email"
+                  name="email"
+                  type="email"
+                  data-testid="login-email-input"
+                  autocomplete="username"
+                  value="edwin@gmail.com"
+                  required
+                >
+              </div>
+
+              <div>
+                <label for="login-password">Contraseña</label>
+                <input
+                  id="login-password"
+                  name="password"
+                  type="password"
+                  data-testid="login-password-input"
+                  autocomplete="current-password"
+                  value="edwin1234567"
+                  required
+                >
+              </div>
+
+              <button id="login-submit" type="submit" class="primary-button" data-testid="login-submit-button">
+                Ingresar
+              </button>
+            </form>
+
+            <p id="login-error" class="alert error hidden" role="alert" data-testid="login-error"></p>
+          </div>
+        </section>
+
+        <section id="catalog-view" class="view hidden" data-testid="catalog-view" aria-label="Vista de cartelera">
+          <div class="panel">
+            <div class="panel-header split-header">
+              <div>
+                <p class="eyebrow">Cartelera</p>
+                <h2>Películas disponibles</h2>
+              </div>
+              <span class="status-pill" data-testid="catalog-status">100+ propuestas</span>
+            </div>
+
+            <div id="movie-grid" class="movie-grid" data-testid="movie-grid" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section id="seat-view" class="view hidden" data-testid="seat-view" aria-label="Vista de selección de asientos">
+          <div class="panel">
+            <div class="panel-header split-header">
+              <div>
+                <p class="eyebrow">Selección</p>
+                <h2 id="seat-movie-title">Elige tus asientos</h2>
+              </div>
+
+              <div class="header-actions">
+                <button id="back-to-catalog-button" type="button" class="ghost-button" data-testid="back-to-catalog-button">
+                  Volver
+                </button>
+                <button id="continue-to-payment" type="button" class="primary-button" data-testid="continue-to-payment-button">
+                  Continuar al pago
+                </button>
+              </div>
+            </div>
+
+            <div class="screen" data-testid="screen-indicator">Pantalla</div>
+            <div id="seat-grid" class="seat-grid" data-testid="seat-grid"></div>
+
+            <div class="selection-summary" data-testid="seat-selection-summary">
+              <span>Asientos seleccionados:</span>
+              <strong id="selected-seats-text">Ninguno</strong>
+            </div>
+            <p id="seat-selection-error" class="alert error hidden" role="alert" data-testid="seat-selection-error"></p>
+          </div>
+        </section>
+
+        <section id="checkout-view" class="view hidden" data-testid="checkout-view" aria-label="Vista de pago">
+          <div class="panel checkout-panel">
+            <div class="panel-header split-header">
+              <div>
+                <p class="eyebrow">Checkout</p>
+                <h2>Pago seguro</h2>
+              </div>
+              <button id="back-to-seat-button" type="button" class="ghost-button" data-testid="back-to-seat-button">
+                Volver a asientos
+              </button>
+            </div>
+
+            <div class="checkout-grid">
+              <aside class="checkout-summary" data-testid="checkout-summary">
+                <h3>Resumen de compra</h3>
+                <div class="summary-item">
+                  <span>Película</span>
+                  <strong id="checkout-movie-name">—</strong>
+                </div>
+                <div class="summary-item">
+                  <span>Asientos</span>
+                  <strong id="checkout-seat-list">—</strong>
+                </div>
+                <div class="summary-item total-row">
+                  <span>Total</span>
+                  <strong id="checkout-total">$0</strong>
+                </div>
+              </aside>
+
+              <form id="checkout-form" data-testid="checkout-form" novalidate>
+                <div>
+                  <label for="checkout-card-number">Número de tarjeta</label>
+                  <input id="checkout-card-number" type="text" inputmode="numeric" data-testid="checkout-card-number" maxlength="19" placeholder="4242 4242 4242 4242" required>
+                </div>
+
+                <div class="form-row">
+                  <div>
+                    <label for="checkout-card-holder">Titular</label>
+                    <input id="checkout-card-holder" type="text" data-testid="checkout-card-holder" value="Edwin Martinez" required>
+                  </div>
+                  <div>
+                    <label for="checkout-expiry">Expira</label>
+                    <input id="checkout-expiry" type="text" data-testid="checkout-expiry" value="12/30" maxlength="5" placeholder="MM/YY" required>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div>
+                    <label for="checkout-cvv">CVV</label>
+                    <input id="checkout-cvv" type="password" inputmode="numeric" data-testid="checkout-cvv" maxlength="4" value="123" required>
+                  </div>
+                  <div>
+                    <label for="checkout-amount">Monto</label>
+                    <input id="checkout-amount" type="text" data-testid="checkout-amount" value="$0" readonly>
+                  </div>
+                </div>
+
+                <button id="checkout-submit" type="submit" class="primary-button" data-testid="checkout-submit-button">
+                  Confirmar pago
+                </button>
+              </form>
+            </div>
+
+            <p id="checkout-error" class="alert error hidden" role="alert" data-testid="checkout-error"></p>
+          </div>
+        </section>
+
+        <section id="confirmation-view" class="view hidden" data-testid="confirmation-view" aria-label="Vista de confirmación">
+          <div class="panel confirmation-panel">
+            <div class="panel-header text-center">
+              <p class="eyebrow">Confirmación</p>
+              <h2>Reserva confirmada</h2>
+            </div>
+
+            <div id="confirmation-detail" class="confirmation-detail" data-testid="confirmation-detail"></div>
+
+            <div class="confirmation-actions">
+              <button id="new-booking-button" type="button" class="primary-button" data-testid="new-booking-button">
+                Nueva reserva
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>
+</file>
+
+</files>
