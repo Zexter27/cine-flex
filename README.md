@@ -1,27 +1,30 @@
-# CineFlex
+# CineFlex - QA en Producción
 
-![Build](https://img.shields.io/badge/Build-GitHub_Actions-blue?logo=githubactions)
+![Build](https://img.shields.io/badge/Build-CI%20configurado-blue?logo=githubactions)
 ![Version](https://img.shields.io/badge/Version-0.1.0-informational)
-![Node.js](https://img.shields.io/badge/Node.js-20-green?logo=nodedotjs)
 
-CineFlex es una aplicación de demostración para el flujo de reserva de cine. Contiene una interfaz web para iniciar sesión, consultar la cartelera, seleccionar asientos, procesar un pago simulado y consultar la confirmación de la reserva. El backend expone una API REST con Express y TypeScript, emplea datos en memoria y una pasarela de pagos simulada, y dispone de artefactos de pruebas de API, interfaz y rendimiento.
+CineFlex es una aplicación web de demostración para validar el flujo de inicio de sesión, consulta de cartelera, selección de asientos y reserva con una pasarela de pago simulada.
 
-**Repositorio Git:** <https://github.com/Zexter27/cine-flex.git>
 
-## 1. Contexto y Arquitectura de Componentes
 
-La aplicación integra una interfaz estática servida por el backend, una API HTTP y datos simulados. Express publica los archivos de `frontend/`, registra las solicitudes y aplica las rutas, la validación de datos y el manejo de errores. La información de películas, funciones, salas, asientos y el usuario de demostración reside en los mocks del backend; no se configura una base de datos en los archivos incluidos en este proyecto.
+## 1. Sustentación del Proyecto
 
-### Componentes y estructura de directorios
+- [ ] **Video de Sustentación:** [Ver Video de Sustentación en YouTube](URL_AQUÍ)
+
+## 2. Contexto y Arquitectura de Componentes
+
+CineFlex es una aplicación de pruebas para el flujo de reserva de cine. El backend expone una API HTTP implementada con Express y TypeScript, sirve los archivos estáticos del frontend y utiliza datos en memoria junto con una pasarela de pagos simulada.
+
+La organización existente del repositorio es la siguiente:
 
 ```mermaid
 flowchart TD
-    ROOT["cine-flex/"]
+    ROOT["CineFlex/"]
     ROOT --> BACK["backend/"]
     BACK --> SRC["src/"]
-    SRC --> COMUN["comun/\nRespuesta HTTP y errores"]
+    SRC --> COMUN["comun/\nErrores y respuesta HTTP"]
     SRC --> CONF["configuracion/\nVariables de entorno"]
-    SRC --> CTRL["controladores/"]
+    SRC --> CTRL["controladores/\nAsientos, autenticación, cartelera y reserva"]
     SRC --> DTO["dto/\nValidación de solicitudes"]
     SRC --> MID["middlewares/\nAutenticación y errores"]
     SRC --> MOCK["mocks/\nDatos y pasarela de pagos"]
@@ -32,90 +35,106 @@ flowchart TD
     ROOT --> API["api_tests/\nColección y entorno Postman/Newman"]
     ROOT --> UI["ui_tests/\ntest_suite.js y pages/"]
     UI --> POM["LoginPage.js, CarteleraPage.js, ReservaPage.js"]
-    ROOT --> PERF["performance/cine-flex.jmx"]
-    ROOT --> CI[".github/workflows/qa-pipeline.yml"]
+    ROOT --> PERF["performance/\ncine-flex.jmx y evidencias"]
+    ROOT --> CI[".github/workflows/\nqa-pipeline.yml"]
 ```
 
-### Flujo funcional
+### Componentes y flujo funcional
 
-1. El navegador carga la interfaz desde `http://localhost:3000/`.
-2. `POST /login` valida las credenciales de demostración y devuelve un token JWT.
-3. `GET /cartelera` requiere un token Bearer válido. `GET /asientos/disponibles` publica el listado de asientos disponibles.
-4. `POST /reserva` y `POST /pagos/mock` validan los datos recibidos y delegan el procesamiento en la pasarela de pagos simulada.
-5. La interfaz muestra los resultados del flujo de reserva y las pruebas automatizadas verifican contratos HTTP, interacciones de usuario y carga.
+1. El backend sirve la interfaz web y publica la API en el puerto configurado por `PORT`.
+2. `POST /login` valida las credenciales de demostración y entrega un JWT.
+3. `GET /cartelera` requiere un token Bearer válido; `GET /asientos/disponibles` consulta asientos disponibles y admite el parámetro opcional `funcionId`.
+4. `POST /reserva` y `POST /pagos/mock` validan los datos y ejecutan el procesamiento de pago simulado.
+5. `api_tests/` contiene la colección Postman para probar los contratos HTTP, `ui_tests/` automatiza los flujos de navegador y `performance/` contiene el plan JMeter.
 
-### Rutas HTTP disponibles
+### Rutas HTTP presentes
 
-| Método | Ruta | Acceso | Propósito documentado |
+| Método | Ruta | Control de acceso | Propósito |
 |---|---|---|---|
-| `GET` | `/health` | Público | Devuelve el estado de disponibilidad del servicio. |
-| `POST` | `/login` | Público | Valida el inicio de sesión y genera el token JWT. |
-| `GET` | `/cartelera` | Requiere Bearer JWT | Consulta la cartelera de películas simulada. |
-| `GET` | `/asientos/disponibles` | Público | Consulta asientos disponibles; acepta el parámetro opcional `funcionId`. |
-| `POST` | `/reserva` | Requiere Bearer JWT | Valida y procesa una reserva mediante la pasarela de pagos simulada. |
-| `POST` | `/pagos/mock` | Requiere Bearer JWT | Ejecuta el mismo controlador de procesamiento simulado que la ruta de reserva. |
+| `GET` | `/health` | Público | Informa la disponibilidad del servicio. |
+| `POST` | `/login` | Público | Valida el inicio de sesión y devuelve el JWT. |
+| `GET` | `/cartelera` | Bearer JWT | Consulta la cartelera simulada. |
+| `GET` | `/asientos/disponibles` | Público | Consulta asientos disponibles; acepta `funcionId`. |
+| `POST` | `/reserva` | Bearer JWT | Procesa una reserva mediante la pasarela simulada. |
+| `POST` | `/pagos/mock` | Bearer JWT | Procesa un pago simulado. |
 
-## 2. Requisitos Previos (Prerequisites)
+## 3. Requisitos Previos e Instalación Paso a Paso
 
-| Herramienta | Versión declarada | Uso |
+### Runtimes y herramientas
+
+| Herramienta | Versión o referencia presente en los archivos | Uso |
 |---|---|---|
-| Node.js | `20` en GitHub Actions. El README anterior del repositorio indicaba `18` o superior para desarrollo local. | Ejecutar el backend y las suites JavaScript. |
-| npm | `9` o superior en el README anterior del repositorio; la versión exacta no está fijada en los manifiestos incluidos. | Instalar dependencias y ejecutar scripts. |
-| TypeScript | `^5.8.3` en `backend/package.json`. | Comprobación de tipos del backend. |
-| Google Chrome | Requerido por la suite Selenium; no se fija una versión del navegador en los archivos incluidos. | Navegador automatizado en modo headless. |
-| ChromeDriver | `^140.0.0` en `ui_tests/package.json`. | Control del navegador Chrome. |
-| Selenium WebDriver | `^4.35.0` en `ui_tests/package.json`. | Automatización de la interfaz y ejecución del patrón Page Object Model. |
-| Newman | `^6.2.1` en `api_tests/package.json`. | Ejecución de la colección Postman por línea de comandos. |
-| Apache JMeter | `5.6.3` en `performance/cine-flex.jmx`. | Ejecución del plan de carga y estrés. El README anterior del repositorio indicaba `5.5` o superior. |
-| Java Runtime Environment | `8` | Entorno de ejecución de JMeter. |
-| Git | Requerido para clonar el repositorio. | Control de versiones y descarga del código. |
+| Node.js | `20` configurado en GitHub Actions | Ejecutar el backend y las suites JavaScript. |
+| npm | Gestor asociado a Node.js | Instalar dependencias y ejecutar scripts. |
+| Git | Requerido para descargar y versionar el repositorio | Control del código fuente. |
+| Google Chrome | La suite lo requiere| Navegador automatizado en modo headless. |
+| ChromeDriver | `^140.0.0` en `ui_tests/package.json` | Control del navegador. |
+| Selenium WebDriver | `^4.35.0` en `ui_tests/package.json` | Automatización de interfaz mediante POM. |
+| Newman | `^6.2.1` en `api_tests/package.json` | Ejecutar la colección Postman desde consola. |
+| Apache JMeter | `5.6.3` en `performance/cine-flex.jmx` | Ejecutar pruebas de carga y estrés. |
+| Java | Requerido para ejecutar JMeter; Java Runtime Environment 8 | Runtime de JMeter. |
 
-## 3. Configuración Rápida y Ejecución (Local Setup)
+### Instalación secuencial
 
-### Clonar el repositorio
+**Paso 1. Obtenga el repositorio.** Use la URL asignada al proyecto.
 
-```bash
-git clone https://github.com/Zexter27/cine-flex.git
-cd cine-flex
-```
-
-### Configurar el entorno
-
-Cree el archivo `.env` en la raíz a partir del archivo de ejemplo:
+**Paso 2. Configure el entorno en la raíz del repositorio.** e instale las dependencias de la raiz, contiene `.env.example`, y `package.json`.
+En Bash:
 
 ```bash
 cp .env.example .env
 ```
 
-El backend busca la configuración en `.env` dentro de su directorio de ejecución y, como alternativa, en el directorio raíz del repositorio. El archivo de ejemplo contiene las variables documentadas en la sección 4.
+En PowerShell:
 
-### Instalar dependencias e iniciar el backend
+```powershell
+Copy-Item .env.example .env
+```
 
-Desde la raíz del repositorio, ejecute:
+**Paso 3. Instale las dependencias e inicie el backend.** Ejecute los comandos desde una terminal:
 
 ```bash
 cd backend
-npm ci
+npm install
 npm run comprobar
 npm start
 ```
 
-El comando `npm run comprobar` ejecuta `tsc --noEmit` para verificar los tipos de TypeScript. `npm start` inicia el servidor HTTP según el puerto definido en `PORT`.
+`npm run comprobar` ejecuta la verificación de tipos de TypeScript. Mantenga este proceso activo para las pruebas de API, UI y rendimiento. El backend sirve `frontend/`; esa carpeta no contiene un `package.json` ni necesita una instalación npm independiente.
 
-### Acceder a la aplicación
+**Paso 4. Instale y ejecute las pruebas de API.** Abra otra terminal en la raíz del proyecto y ejecute:
 
-Abra <http://localhost:3000/> en el navegador. El backend sirve directamente los archivos estáticos de `frontend/`; el proyecto no requiere un comando de servidor independiente para esa carpeta.
+```bash
+cd api_tests
+npm install
+npm test
+```
 
-Las credenciales de demostración utilizadas por los mocks y por las pruebas son:
+**Paso 5. Instale y ejecute las pruebas de interfaz.** Mantenga el backend activo, abra otra terminal y ejecute:
 
-| Campo | Valor |
-|---|---|
-| Correo | `edwin@gmail.com` |
-| Contraseña | `edwin1234567` |
+```bash
+cd ui_tests
+npm install
+npm test
+```
+
+La ejecución UI requiere Google Chrome disponible en el entorno. La suite configura Chrome en modo headless.
+
+**Paso 6. Ejecute el plan de rendimiento.** Con JMeter y Java instalados, desde la raíz del proyecto ejecute:
+
+```bash
+jmeter -t performance/cine-flex.jmx
+```
+
+Para ejecución no gráfica y registro de muestras:
+
+```bash
+jmeter -n -t performance/cine-flex.jmx -l performance/cine-flex.jtl
+```
 
 ## 4. Gestión de Configuración (Environment Variables)
 
-Copie `.env.example` a `.env` y conserve los nombres de variables definidos por el backend.
+Copie `.env.example` a `.env` y configure las variables siguientes. Los valores que aparecen en la columna final corresponden exactamente al archivo de ejemplo incluido en el proyecto.
 
 ```dotenv
 PORT=3000
@@ -128,71 +147,217 @@ FRONTEND_PATH=../frontend
 
 | Variable | Tipo | Descripción | Valor por Defecto |
 |---|---|---|---|
-| `PORT` | Entero | Puerto HTTP del servidor. El backend valida que se encuentre entre `1` y `65535`. | `3000` |
-| `JWT_SECRET` | Cadena | Secreto utilizado para firmar y verificar los tokens JWT. El backend exige al menos 32 caracteres. | `cambia-esta-clave-local-por-una-de-al-menos-32-caracteres` |
-| `JWT_DURACION_SEGUNDOS` | Entero | Duración de los tokens JWT expresada en segundos. Debe ser mayor que cero. | `3600` |
-| `LIMITE_CUERPO_BYTES` | Entero | Tamaño máximo del cuerpo JSON de una solicitud, en bytes. Debe ser mayor que cero. | `10240` |
-| `MORGAN_FORMAT` | Cadena | Valor de configuración declarado para el registro de solicitudes con Morgan. | `dev` |
-| `FRONTEND_PATH` | Ruta relativa | Ruta de la interfaz web respecto del directorio raíz de `backend`. | `../frontend` |
+| `PORT` | Entero | Puerto HTTP en el que escucha el backend; debe estar entre `1` y `65535`. | `3000` |
+| `JWT_SECRET` | Cadena | Clave para firmar y validar JWT. La configuración exige al menos 32 caracteres. | `cambia-esta-clave-local-por-una-de-al-menos-32-caracteres` |
+| `JWT_DURACION_SEGUNDOS` | Entero | Duración del JWT expresada en segundos; debe ser mayor que cero. | `3600` |
+| `LIMITE_CUERPO_BYTES` | Entero | Tamaño máximo permitido para el cuerpo de la solicitud; debe ser mayor que cero. | `10240` |
+| `MORGAN_FORMAT` | Cadena | Formato de registro declarado para Morgan. | `dev` |
+| `FRONTEND_PATH` | Ruta relativa | Ubicación de los recursos estáticos respecto al directorio `backend`. | `../frontend` |
 
-El módulo de configuración requiere los valores definidos, valida los valores numéricos y rechaza el inicio si falta una variable obligatoria o si `JWT_SECRET` tiene menos de 32 caracteres.
+El backend rechaza la configuración cuando falta una variable obligatoria, un valor numérico no es entero o `JWT_SECRET` tiene menos de 32 caracteres. El valor incluido en el ejemplo está descrito por el propio nombre de variable como una clave local de ejemplo.
 
-## 5. Módulo de Pruebas de API (Postman / Newman)
+## 5. Módulo de Pruebas de API e Integración Continua (CI/CD)
 
-La colección se encuentra en `api_tests/CineFlex_API_Collection.json` y el entorno local en `api_tests/CineFlex_Environment.json`. El entorno define `baseUrl`, `correoDemo`, `contrasenaDemo` y `token`; la solicitud de inicio de sesión guarda el JWT para las solicitudes posteriores.
+### Ejecución local de las pruebas de API
 
-### Ejecutar la colección desde la raíz
+La colección está en `api_tests/CineFlex_API_Collection.json` y el entorno de Postman en `api_tests/CineFlex_Environment.json`. La colección contiene diez solicitudes: health check, login, cartelera con y sin token, asientos disponibles y escenarios de reserva aprobada y rechazada.
 
-Con el backend en ejecución, use Newman sin instalación global:
-
-```bash
-npx --yes newman run api_tests/CineFlex_API_Collection.json -e api_tests/CineFlex_Environment.json
-```
-
-Para generar un reporte JUnit como el publicado por CI:
+Con el backend activo, desde la raíz del repositorio puede ejecutar Newman sin instalarlo globalmente:
 
 ```bash
-mkdir -p reportes
 npx --yes newman run api_tests/CineFlex_API_Collection.json \
-  -e api_tests/CineFlex_Environment.json \
-  --reporters cli,junit \
-  --reporter-junit-export reportes/newman.xml
+  -e api_tests/CineFlex_Environment.json
 ```
 
-También está declarado el script `test` dentro de `api_tests/package.json`. Para ejecutarlo desde esa carpeta, instale sus dependencias y ejecute `npm test`:
+Desde `api_tests/`, los scripts declarados permiten ejecutar la colección y generar un reporte JSON:
 
 ```bash
 cd api_tests
 npm install
 npm test
+mkdir -p reportes
+npm run test:report
 ```
 
-### Cobertura de la colección existente
+Los valores de `correoDemo` y `contrasenaDemo` del entorno local deben corresponder a una cuenta de prueba válida para la implementación mock. No se reproducen aquí credenciales detectadas en los archivos de origen.
 
-La colección incluye diez solicitudes con aserciones sobre el contrato HTTP y la estructura de las respuestas:
+### Workflow para `.github/workflows/qa-pipeline.yml`
 
-| N.º | Caso | Verificaciones principales |
-|---:|---|---|
-| 1 | Health check | HTTP `200`, `exito = true`, mensaje no vacío y `datos.estado = disponible`. |
-| 2 | Login exitoso | HTTP `200`, identificador y correo del usuario, JWT de tres partes y almacenamiento del token en el entorno. |
-| 3 | Cartelera sin token | HTTP `401`, respuesta no exitosa y `datos = null`. |
-| 4 | Cartelera con token | HTTP `200`, lista no vacía, estructura básica de películas y tiempo de respuesta inferior a `300 ms`. |
-| 5 | Asientos disponibles | HTTP `200`, lista no vacía, identificador de asiento y campo `disponible` booleano. Consulta `funcionId=5`. |
-| 6 | Reserva sin token | HTTP `401` y respuesta no exitosa. |
-| 7 | Reserva aprobada | HTTP `200`, estado `aprobado`, código `approved`, identificador de transacción, monto y moneda `COP`. |
-| 8 | Reserva con correo distinto | HTTP `403` y mensaje de posible actividad sospechosa. |
-| 9 | Tarjeta vencida | HTTP `402` y mensaje de tarjeta vencida. |
-| 10 | Número de tarjeta no numérico | HTTP `400` y mensaje de validación de la información enviada. |
+El siguiente flujo configura Ubuntu y Node.js 20, instala el backend, comprueba TypeScript, levanta el servidor, verifica respuestas HTTP y ejecuta Newman en cada `push` o `pull_request` dirigido a `main`. El comando de Newman no oculta fallos: si alguna aserción falla, el paso y el job finalizan con error.
 
-La colección usa `http://localhost:3000` como URL base. Los escenarios de pago usan la pasarela simulada del backend.
+Configure en **Settings → Secrets and variables → Actions** los secretos `CINEFLEX_DEMO_EMAIL` y `CINEFLEX_DEMO_PASSWORD` con las credenciales de la cuenta mock que reconoce el backend. El flujo no imprime esos valores.
+
+```yaml
+name: QA Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-tests:
+    name: Backend + pruebas de API
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CINEFLEX_DEMO_EMAIL: ${{ secrets.CINEFLEX_DEMO_EMAIL }}
+      CINEFLEX_DEMO_PASSWORD: ${{ secrets.CINEFLEX_DEMO_PASSWORD }}
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validar secretos para las pruebas
+        run: |
+          if [ -z "$CINEFLEX_DEMO_EMAIL" ] || [ -z "$CINEFLEX_DEMO_PASSWORD" ]; then
+            echo "::error::Configure CINEFLEX_DEMO_EMAIL y CINEFLEX_DEMO_PASSWORD en GitHub Actions Secrets."
+            exit 1
+          fi
+
+      - name: Crear .env para CI
+        run: |
+          cp .env.example .env
+          sed -i "s/^JWT_SECRET=.*/JWT_SECRET=$(openssl rand -hex 32)/" .env
+
+      - name: Instalar dependencias del backend
+        working-directory: backend
+        run: npm install
+
+      - name: Verificar tipos de TypeScript
+        working-directory: backend
+        run: npm run comprobar
+
+      - name: Iniciar el backend en segundo plano
+        working-directory: backend
+        run: |
+          nohup npm start > ../backend.log 2>&1 &
+          echo "Backend iniciado en segundo plano."
+
+      - name: Esperar a que el backend esté disponible
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/health > /dev/null; then
+              echo "Backend disponible en el intento $i."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::El backend no respondió en /health tras 60 segundos."
+          cat backend.log
+          exit 1
+
+      - name: Ejecutar pruebas de humo HTTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="http://localhost:3000"
+          check() {
+            if [ "$2" != "$3" ]; then
+              echo "::error::$1: se esperaba HTTP $2 y se obtuvo $3"
+              exit 1
+            fi
+            echo "OK $1 (HTTP $3)"
+          }
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/health")
+          check "Health check" 200 "$code"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/login" \
+            -H 'Content-Type: application/json' \
+            -d '{"correoElectronico":"usuario-inexistente-ci@example.com","contrasena":"clave-invalida-ci"}')
+          check "Login inválido" 401 "$code"
+
+          LOCK_EMAIL="bloqueo-ci-${GITHUB_RUN_ID}@example.com"
+          for n in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/login" \
+              -H 'Content-Type: application/json' \
+              -d "{\"correoElectronico\":\"$LOCK_EMAIL\",\"contrasena\":\"clave-invalida-ci\"}")
+            if [ "$n" -lt 3 ]; then
+              check "Bloqueo preventivo: intento $n" 401 "$code"
+            fi
+          done
+          check "Bloqueo preventivo: tercer intento" 423 "$code"
+
+          LOGIN_BODY=$(jq -n \
+            --arg correo "$CINEFLEX_DEMO_EMAIL" \
+            --arg contrasena "$CINEFLEX_DEMO_PASSWORD" \
+            '{correoElectronico:$correo,contrasena:$contrasena}')
+          LOGIN_RESPONSE=$(curl -sS -X POST "$BASE/login" \
+            -H 'Content-Type: application/json' \
+            -d "$LOGIN_BODY")
+          TOKEN=$(printf '%s' "$LOGIN_RESPONSE" | jq -r '.datos.token // empty')
+          if [ -z "$TOKEN" ]; then
+            echo "::error::El login válido no devolvió un token."
+            exit 1
+          fi
+          echo "OK Login válido (token recibido)"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/cartelera")
+          check "Cartelera sin token" 401 "$code"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/cartelera" \
+            -H "Authorization: Bearer $TOKEN")
+          check "Cartelera con token" 200 "$code"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/asientos/disponibles")
+          check "Asientos disponibles" 200 "$code"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/reserva" \
+            -H 'Content-Type: application/json' -d '{}')
+          check "Reserva sin token" 401 "$code"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/ruta-inexistente")
+          check "Ruta inexistente" 404 "$code"
+
+      - name: Ejecutar colección Postman con Newman
+        run: |
+          mkdir -p reportes
+          npx --yes newman run api_tests/CineFlex_API_Collection.json \
+            -e api_tests/CineFlex_Environment.json \
+            --env-var "baseUrl=http://localhost:3000" \
+            --env-var "correoDemo=$CINEFLEX_DEMO_EMAIL" \
+            --env-var "contrasenaDemo=$CINEFLEX_DEMO_PASSWORD" \
+            --reporters cli,junit \
+            --reporter-junit-export reportes/newman.xml
+
+      - name: Publicar reporte de Newman
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-newman
+          path: reportes/newman.xml
+          if-no-files-found: ignore
+
+      - name: Publicar log del backend cuando falla el job
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-log
+          path: backend.log
+          if-no-files-found: ignore
+```
+
+El job cubre comprobación de tipos, pruebas de humo HTTP y la colección de API. El flujo descrito no ejecuta la suite Selenium ni el plan JMeter.
 
 ## 6. Módulo de Pruebas de Interfaz de Usuario (Selenium + POM)
 
-La suite se encuentra en `ui_tests/test_suite.js` y sigue el patrón Page Object Model (POM): las clases de `ui_tests/pages/` encapsulan localizadores y acciones de las vistas.
+La suite se encuentra en `ui_tests/test_suite.js` y utiliza el patrón **Page Object Model (POM)**. Las clases de `ui_tests/pages/` encapsulan localizadores y acciones de las vistas. La ejecución requiere el backend activo y Chrome disponible.
 
-### Ejecutar la suite
-
-Mantenga el backend activo y ejecute desde la raíz:
+### Comandos de ejecución
 
 ```bash
 cd ui_tests
@@ -200,107 +365,68 @@ npm install
 npm test
 ```
 
-La suite construye Chrome con `--headless=new`, `--no-sandbox`, `--disable-dev-shm-usage` y un tamaño de ventana de `1440x1200`. Al terminar, cierra el controlador del navegador. La ejecución imprime los nombres de los casos y finaliza con el mensaje de suite completada si no se produce un error.
+El controlador se configura con `--headless=new`, `--no-sandbox`, `--disable-dev-shm-usage` y una ventana de `1440x1200`. Al finalizar, el test suite cierra el controlador del navegador y devuelve un código de error cuando un caso falla.
 
 ### Page Objects
 
-| Archivo | Responsabilidad |
+| Archivo | Responsabilidad comprobada en el código |
 |---|---|
-| `pages/LoginPage.js` | Abrir la aplicación, ingresar credenciales, iniciar sesión, leer errores y cerrar sesión. |
-| `pages/CarteleraPage.js` | Consultar la vista de cartelera, seleccionar una película, contar tarjetas y navegar atrás. |
-| `pages/ReservaPage.js` | Seleccionar un asiento, avanzar al pago, completar datos, confirmar pago y consultar la confirmación. |
+| `pages/LoginPage.js` | Abrir la aplicación, introducir credenciales, iniciar y cerrar sesión y leer mensajes de error. |
+| `pages/CarteleraPage.js` | Consultar la cartelera, seleccionar una película, contar tarjetas y navegar atrás. |
+| `pages/ReservaPage.js` | Seleccionar asiento, avanzar al pago, rellenar los datos de prueba, confirmar y consultar el resultado. |
 
-### Casos de prueba automatizados
+### Casos presentes en `test_suite.js`
 
 | N.º | Caso | Flujo comprobado |
 |---:|---|---|
-| 1 | `01_bloqueo_preventivo` | Verifica el mensaje de bloqueo tras tres intentos de inicio de sesión fallidos. |
-| 2 | `02_login_exitoso` | Inicia sesión con credenciales de demostración y comprueba la visibilidad de la cartelera. |
-| 3 | `03_seleccion_pelicula` | Selecciona una película y espera la vista de asientos. |
-| 4 | `04_compra_end_to_end` | Selecciona asiento, completa el pago simulado y espera la confirmación. |
-| 5 | `05_cierre_sesion_y_historial` | Cierra sesión y comprueba que el historial no vuelva a mostrar una vista autenticada. |
-| 6 | `06_login_nuevo_exitoso` | Realiza un nuevo inicio de sesión. |
-| 7 | `07_persistencia_ocupacion_real` | Recorre la selección de asiento, navegación, cierre de sesión y nuevo inicio de sesión. |
-| 8 | `08_tarjeta_vencida` | Comprueba la respuesta ante una tarjeta vencida. |
-| 9 | `09_cvv_invalido` | Comprueba la validación de CVV. |
-| 10 | `10_fondos_insuficientes` | Comprueba la respuesta de fondos insuficientes de la pasarela simulada. |
-| 11 | `11_login_timeout` | Comprueba que un inicio de sesión fallido muestre un mensaje de error. |
-| 12 | `12_sin_asientos_seleccionados` | Comprueba la validación al continuar sin seleccionar asientos. |
-| 13 | `13_navegacion_atras_dentro_login` | Comprueba que la navegación hacia atrás mantenga la vista de inicio de sesión después del cierre de sesión. |
-| 14 | `14_navegacion_insegura_sin_token` | Comprueba la vista inicial cuando se abre la aplicación sin token. |
-| 15 | `15_cierre_sesion_desde_catalogo` | Cierra sesión desde la cartelera y espera la vista de inicio de sesión. |
+| 1 | `01_bloqueo_preventivo` | Bloqueo después de tres intentos de login fallidos. |
+| 2 | `02_login_exitoso` | Inicio de sesión y visibilidad de la cartelera. |
+| 3 | `03_seleccion_pelicula` | Selección de película y apertura de la vista de asientos. |
+| 4 | `04_compra_end_to_end` | Selección de asiento, pago simulado y confirmación de la reserva. |
+| 5 | `05_cierre_sesion_y_historial` | Cierre de sesión y navegación atrás sin recuperar una vista autenticada. |
+| 6 | `06_login_nuevo_exitoso` | Nuevo inicio de sesión. |
+| 7 | `07_persistencia_ocupacion_real` | Selección de asiento, navegación, cierre de sesión e inicio de sesión posterior. |
+| 8 | `08_tarjeta_vencida` | Mensaje ante tarjeta vencida. |
+| 9 | `09_cvv_invalido` | Validación del CVV. |
+| 10 | `10_fondos_insuficientes` | Respuesta de fondos insuficientes de la pasarela simulada. |
+| 11 | `11_login_timeout` | Presentación de error ante un login fallido. |
+| 12 | `12_sin_asientos_seleccionados` | Validación al continuar sin seleccionar asiento. |
+| 13 | `13_navegacion_atras_dentro_login` | Conservación de la vista de login tras cerrar sesión y navegar atrás. |
+| 14 | `14_navegacion_insegura_sin_token` | Vista inicial cuando se abre la aplicación sin token. |
+| 15 | `15_cierre_sesion_desde_catalogo` | Cierre de sesión desde la cartelera. |
 
-## 7. Módulo de Rendimiento (JMeter)
+## 7. Reporte de Pruebas de Estrés y Rendimiento (JMeter)
 
-El plan de carga está definido en `performance/cine-flex.jmx`. Los parámetros siguientes proceden del plan JMeter incluido en el repositorio.
+### Evidencia gráfica
 
-| Parámetro | Configuración |
-|---|---|
-| Versión de JMeter del plan | `5.6.3` |
-| Protocolo y host | `http://localhost:3000` |
-| Usuarios virtuales (threads) | `500` |
-| Ramp-up | `15` segundos |
-| Iteraciones por grupo | `1` |
-| Comportamiento al fallar una solicitud | Continuar (`continue`). |
-| Recolector de resultados | `View Results Tree`. |
-| Extracción del token | JSONPath `$.datos.token`, guardado en la variable `mi_jwt`. |
-| Cabeceras de solicitud | `Authorization: Bearer ${mi_jwt}` y `Content-Type: application/json`. |
+![Summary Report - JMeter (500 usuarios)](performance/evidencias/summary_report_500.jpeg)
 
-### Secuencia y endpoints evaluados
 
-1. `POST /login`: envía las credenciales de demostración y extrae el JWT de la respuesta.
-2. `GET /cartelera`: solicita la cartelera con la cabecera de autorización.
-3. `GET /asientos/disponibles`: consulta la disponibilidad de asientos.
-4. `POST /reserva`: envía un cuerpo JSON con los datos de tarjeta de prueba, monto, moneda, correo, identificador de función y asiento generado por el plan.
 
-### Ejecución
+![Comparación de Throughput y porcentaje de error](performance/evidencias/comparacion_escenarios.png)
 
-Para abrir el plan en la interfaz gráfica de JMeter:
 
-```bash
-jmeter -t performance/cine-flex.jmx
-```
 
-Para ejecutar en modo no gráfico y guardar las muestras en un archivo JTL:
+![Comparación de escenarios de 500, 1.000, 2.500 y 10.000 usuarios](performance/evidencias/comparacion_escenarios_500_1000_2500_10000.png)
 
-```bash
-jmeter -n -t performance/cine-flex.jmx -l performance/cine-flex.jtl
-```
+*Gráfica comparativa de los resultados de rendimiento para los escenarios de 500, 1.000, 2.500 y 10.000 usuarios.*
 
-El plan contiene configuración de solicitudes y recopilación de muestras; el XML de origen no incluye resultados ejecutados de rendimiento.
+### Tabla comparativa de carga
 
-## 8. Integración Continua (CI/CD)
+| Escenario | Usuarios Virtuales | Peticiones Totales | Throughput (TPS) | Porcentaje de Error (%) |
+|---|---:|---:|---|---|
+| **Escenario 1 — Carga** (`/asientos/disponibles`, ramp-up 15 s) | 500 | 2.000 en el flujo; 500 a `/asientos/disponibles` | 133.57 TPS global; 33.41 TPS para `/asientos/disponibles` | 0.00 % global y 0.00 % en el endpoint |
+| **Escenario 2 — Estrés** | 10.000 | 40.000 en el flujo; 10.000 por sampler, incluido `/asientos/disponibles` | 1921.60 TPS global; 481.49 TPS para `Asientos Disponibles` | 59.84 % global (23.935 de 40.000); 59.26 % en `Asientos Disponibles` (5.926 de 10.000) |
 
-El workflow `.github/workflows/qa-pipeline.yml`, con nombre `QA Pipeline`, utiliza GitHub Actions y define un job de backend y pruebas de API.
 
-### Eventos que disparan el workflow
 
-- `push` a la rama `main`.
-- `pull_request` dirigido a la rama `main`.
-- `workflow_dispatch`, para ejecución manual.
+## 8. Entregables y Actividades del Equipo
 
-### Flujo automatizado
+Los archivos proporcionados permiten identificar las siguientes actividades técnicas y entregables.
 
-1. Descarga el repositorio mediante `actions/checkout@v4`.
-2. Configura Node.js `20` mediante `actions/setup-node@v4`.
-3. Crea `.env` desde `.env.example` y reemplaza `JWT_SECRET` por una clave aleatoria efímera generada durante la ejecución.
-4. Instala las dependencias del backend con `npm ci`.
-5. Ejecuta `npm run comprobar` para validar TypeScript.
-6. Inicia el backend y espera hasta 60 segundos a que responda `GET /health` en `http://localhost:3000/health`.
-7. Ejecuta pruebas de humo HTTP para disponibilidad, login inválido, bloqueo tras tres intentos, login válido, cartelera con y sin token, asientos disponibles, reserva sin token y ruta inexistente.
-8. Ejecuta la colección Postman con Newman y genera el reporte JUnit en `reportes/newman.xml`.
-9. Publica el reporte Newman como artefacto aunque el job falle y publica `backend.log` cuando ocurre un fallo.
-
-El job se ejecuta en `ubuntu-latest`, tiene un límite de 10 minutos, restringe los permisos a `contents: read` y cancela una ejecución anterior del mismo grupo cuando corresponde. El workflow definido automatiza la comprobación de tipos y las pruebas HTTP/API; no contiene pasos de ejecución de Selenium ni de JMeter.
-
-## 9. Entregables y Actividades del Equipo
-
-### Entregables presentes en el repositorio
-
-- **Aplicación:** backend Express/TypeScript (`backend/`) e interfaz web estática (`frontend/`).
-- **Pruebas de API:** colección Postman `api_tests/CineFlex_API_Collection.json` y entorno `api_tests/CineFlex_Environment.json`, con diez solicitudes automatizadas.
-- **Pruebas de interfaz:** suite `ui_tests/test_suite.js` con 15 casos y tres Page Objects.
-- **Pruebas de rendimiento:** plan JMeter `performance/cine-flex.jmx`.
-- **Integración continua:** workflow `.github/workflows/qa-pipeline.yml` para la comprobación TypeScript y las pruebas HTTP/API.
-
+1. **Aplicación y API:** backend Express/TypeScript, interfaz web estática, rutas para salud, autenticación, cartelera, asientos y reserva, validación DTO, middleware de autenticación, manejo de errores, datos mock y pasarela de pago simulada.
+2. **Pruebas de API:** colección `api_tests/CineFlex_API_Collection.json` y entorno `api_tests/CineFlex_Environment.json`, con diez solicitudes y aserciones sobre respuestas HTTP, autenticación, reservas y validación.
+3. **Pruebas de interfaz:** suite `ui_tests/test_suite.js` con quince casos automatizados y tres Page Objects: `LoginPage.js`, `CarteleraPage.js` y `ReservaPage.js`.
+4. **Pruebas de carga y estrés:** plan JMeter `performance/cine-flex.jmx` y artefactos de resultados para los escenarios de 500, 1.000, 2.500 y 10.000 usuarios.
+5. **Integración continua:** workflow `.github/workflows/qa-pipeline.yml` para comprobar tipos de TypeScript, iniciar el backend, ejecutar validaciones HTTP y correr Newman con publicación del reporte.
 
