@@ -1,0 +1,337 @@
+{
+  "info": {
+    "_postman_id": "cineflex-smoke-0001",
+    "name": "CineFlex API - Smoke",
+    "description": "Suite de humo de la API mock de CineFlex: salud, login, cartelera, asientos y reserva (aprobada y rechazo por fraude). No modifica la lógica del backend; solo valida el contrato HTTP.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Health check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Estado HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('exito es true', () => pm.expect(pm.response.json().exito).to.be.true);",
+              "pm.test('mensaje informativo', () => pm.expect(pm.response.json().mensaje).to.be.a('string').and.not.empty);",
+              "pm.test('datos.estado = disponible', () => pm.expect(pm.response.json().datos.estado).to.eql('disponible'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "2. Login exitoso (guarda token)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": ["pm.environment.unset('token');"],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Estado HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('exito es true', () => pm.expect(pm.response.json().exito).to.be.true);",
+              "const json = pm.response.json();",
+              "pm.test('datos.usuario contiene id y correo', () => {",
+              "  pm.expect(json.datos.usuario).to.have.property('id');",
+              "  pm.expect(json.datos.usuario.correoElectronico).to.be.a('string');",
+              "});",
+              "pm.test('datos.token es un JWT de 3 partes', () => {",
+              "  pm.expect(json.datos.token).to.be.a('string');",
+              "  pm.expect(json.datos.token.split('.')).to.have.lengthOf(3);",
+              "});",
+              "pm.environment.set('token', json.datos.token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correoElectronico\": \"{{correoDemo}}\",\n  \"contrasena\": \"{{contrasenaDemo}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["login"]
+        }
+      }
+    },
+    {
+      "name": "3. Cartelera sin token -> 401",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Estado HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('exito es false', () => pm.expect(pm.response.json().exito).to.be.false);",
+              "pm.test('mensaje de autenticacion', () => pm.expect(pm.response.json().mensaje).to.include('token'));",
+              "pm.test('datos es null', () => pm.expect(pm.response.json().datos).to.eql(null));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/cartelera",
+          "host": ["{{baseUrl}}"],
+          "path": ["cartelera"]
+        }
+      }
+    },
+    {
+      "name": "4. Cartelera con token -> 200",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Estado HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('exito es true', () => pm.expect(pm.response.json().exito).to.be.true);",
+              "const datos = pm.response.json().datos;",
+              "pm.test('datos es una lista no vacia', () => {",
+              "  pm.expect(datos).to.be.an('array').and.not.empty;",
+              "});",
+              "pm.test('cada pelicula tiene su estructura basica', () => {",
+              "  datos.slice(0, 5).forEach((p) => {",
+              "    pm.expect(p).to.have.all.keys('id', 'titulo', 'sinopsis', 'generos', 'duracionMinutos', 'clasificacion', 'poster');",
+              "    pm.expect(p.titulo).to.be.a('string').and.not.empty;",
+              "    pm.expect(p.generos).to.be.an('array');",
+              "  });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/cartelera",
+          "host": ["{{baseUrl}}"],
+          "path": ["cartelera"]
+        }
+      }
+    },
+    {
+      "name": "5. Asientos disponibles -> 200",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Estado HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('exito es true', () => pm.expect(pm.response.json().exito).to.be.true);",
+              "const datos = pm.response.json().datos;",
+              "pm.test('datos es una lista no vacia', () => {",
+              "  pm.expect(datos).to.be.an('array').and.not.empty;",
+              "});",
+              "pm.test('cada asiento tiene id y disponible booleano', () => {",
+              "  datos.slice(0, 10).forEach((a) => {",
+              "    pm.expect(a).to.have.property('id').that.is.a('string');",
+              "    pm.expect(a.disponible).to.be.a('boolean');",
+              "  });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/asientos/disponibles?funcionId=5",
+          "host": ["{{baseUrl}}"],
+          "path": ["asientos", "disponibles"],
+          "query": [
+            {
+              "key": "funcionId",
+              "value": "5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Reserva sin token -> 401",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Estado HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('exito es false', () => pm.expect(pm.response.json().exito).to.be.false);",
+              "pm.test('datos es null', () => pm.expect(pm.response.json().datos).to.eql(null));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cardNumber\": \"4111111111111111\",\n  \"cardHolder\": \"Edwin Martinez\",\n  \"expiryMonth\": \"12\",\n  \"expiryYear\": \"2030\",\n  \"cvv\": \"123\",\n  \"amount\": 45000,\n  \"currency\": \"COP\",\n  \"cardType\": \"visa\",\n  \"email\": \"{{correoDemo}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/reserva",
+          "host": ["{{baseUrl}}"],
+          "path": ["reserva"]
+        }
+      }
+    },
+    {
+      "name": "7. Reserva aprobada -> 200",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Estado HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('exito es true', () => pm.expect(pm.response.json().exito).to.be.true);",
+              "const datos = pm.response.json().datos;",
+              "pm.test('transaccion aprobada', () => {",
+              "  pm.expect(datos.estado).to.eql('aprobado');",
+              "  pm.expect(datos.codigo).to.eql('approved');",
+              "  pm.expect(datos.idTransaccion).to.be.a('string').and.not.empty;",
+              "  pm.expect(datos.monto).to.eql(45000);",
+              "  pm.expect(datos.moneda).to.eql('COP');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cardNumber\": \"4111111111111111\",\n  \"cardHolder\": \"Edwin Martinez\",\n  \"expiryMonth\": \"12\",\n  \"expiryYear\": \"2030\",\n  \"cvv\": \"123\",\n  \"amount\": 45000,\n  \"currency\": \"COP\",\n  \"cardType\": \"visa\",\n  \"email\": \"{{correoDemo}}\",\n  \"funcionId\": 5,\n  \"asientos\": [\"A1\", \"A2\"]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/reserva",
+          "host": ["{{baseUrl}}"],
+          "path": ["reserva"]
+        }
+      }
+    },
+    {
+      "name": "8. Reserva con correo distinto -> 403 fraude",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Estado HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('exito es false', () => pm.expect(pm.response.json().exito).to.be.false);",
+              "pm.test('mensaje de fraude', () => pm.expect(pm.response.json().mensaje).to.include('sospechosa'));",
+              "pm.test('datos es null', () => pm.expect(pm.response.json().datos).to.eql(null));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cardNumber\": \"4111111111111111\",\n  \"cardHolder\": \"Edwin Martinez\",\n  \"expiryMonth\": \"12\",\n  \"expiryYear\": \"2030\",\n  \"cvv\": \"123\",\n  \"amount\": 45000,\n  \"currency\": \"COP\",\n  \"cardType\": \"visa\",\n  \"email\": \"otra.persona@ejemplo.com\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/reserva",
+          "host": ["{{baseUrl}}"],
+          "path": ["reserva"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ]
+}
