@@ -67,7 +67,7 @@ flowchart TD
 | Selenium WebDriver | `^4.35.0` en `ui_tests/package.json`. | Automatización de la interfaz y ejecución del patrón Page Object Model. |
 | Newman | `^6.2.1` en `api_tests/package.json`. | Ejecución de la colección Postman por línea de comandos. |
 | Apache JMeter | `5.6.3` en `performance/cine-flex.jmx`. | Ejecución del plan de carga y estrés. El README anterior del repositorio indicaba `5.5` o superior. |
-| Java Runtime Environment | `8` o superior en el README anterior del repositorio; la versión exacta no está fijada en el plan JMeter. | Entorno de ejecución de JMeter. |
+| Java Runtime Environment | `8` | Entorno de ejecución de JMeter. |
 | Git | Requerido para clonar el repositorio. | Control de versiones y descarga del código. |
 
 ## 3. Configuración Rápida y Ejecución (Local Setup)
