@@ -9,7 +9,7 @@ CineFlex es una aplicación web de demostración para validar el flujo de inicio
 
 ## 1. Sustentación del Proyecto
 
-- [ ] **Video de Sustentación:** [Ver Video de Sustentación en YouTube](URL_AQUÍ)
+- [Ver Video de Sustentación en YouTube](https://youtu.be/uDjASIP_Y9E)
 
 ## 2. Contexto y Arquitectura de Componentes
 
